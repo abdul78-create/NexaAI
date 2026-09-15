@@ -13,13 +13,58 @@
 
 ```json
 {
-  "detail": "Human-readable error message",
-  "code": "MACHINE_READABLE_CODE",
-  "field": "optional_field_name"
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Human-readable error message",
+    "request_id": "d1c24e6a-7a54-4670-a359-d8fe670d8a59",
+    "details": null
+  }
 }
 ```
 
 - Streaming endpoints use `text/event-stream` (SSE)
+
+---
+
+## 0. System & Health
+
+### GET `/health`
+Check application service liveness.
+
+**Query Parameters:**
+- `check_db` (boolean, optional): Probe PostgreSQL connectivity.
+
+**Response `200`:**
+```json
+{
+  "status": "healthy",
+  "service": "nexaai-api",
+  "version": "0.1.0",
+  "environment": "development",
+  "database": "connected"
+}
+```
+
+---
+
+### GET `/api/v1/health`
+Versioned application liveness probe.
+
+---
+
+### GET `/api/v1/system/info`
+Retrieve system runtime metadata.
+
+**Response `200`:**
+```json
+{
+  "app_name": "NexaAI API",
+  "version": "0.1.0",
+  "environment": "development",
+  "debug_mode": true,
+  "api_prefix": "/api/v1"
+}
+```
 
 ---
 

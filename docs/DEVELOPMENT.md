@@ -50,7 +50,7 @@ python -m spacy download en_core_web_sm
 alembic upgrade head
 
 # Start dev server
-uvicorn main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
 ```
 
 ### 3. Frontend setup
