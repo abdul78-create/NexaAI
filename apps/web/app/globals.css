@@ -306,4 +306,14 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  /* Custom height */
+  .h-13 {
+    height: 3.25rem;
+  }
+
+  /* Perspective for 3D */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
 }
