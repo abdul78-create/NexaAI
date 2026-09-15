@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { motion, useScroll, useTransform, useSpring, AnimatePresence } from 'motion/react'
+import { motion, useScroll, AnimatePresence } from 'motion/react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useGSAP } from '@gsap/react'
@@ -14,7 +14,7 @@ import {
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Stagger, StaggerItem, FadeUp, FadeIn } from '@/components/motion'
+import { Stagger, StaggerItem, FadeUp } from '@/components/motion'
 import { SmoothScrollProvider } from '@/components/marketing/SmoothScrollProvider'
 import { MagneticButton, PointerGlow } from '@/components/marketing/MagneticButton'
 import { AiOrb } from '@/components/marketing/AiOrb'
@@ -903,7 +903,7 @@ function WorkflowSection() {
         </FadeUp>
 
         <div className="grid sm:grid-cols-2 gap-6">
-          {steps.map((step, i) => (
+          {steps.map((step) => (
             <div key={step.step} className="workflow-step group relative flex gap-5 rounded-2xl border border-white/8 bg-card/50 p-6 hover:border-white/12 transition-all duration-300">
               {/* Step number */}
               <div className="flex-shrink-0">

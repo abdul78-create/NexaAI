@@ -6,14 +6,13 @@
  */
 
 import { useRef, useState } from 'react'
-import { motion, useSpring, useTransform } from 'motion/react'
+import { motion, useSpring } from 'motion/react'
 import { cn } from '@/lib/utils'
 
 interface MagneticButtonProps {
   children: React.ReactNode
   className?: string
   strength?: number
-  as?: 'button' | 'div'
   onClick?: () => void
 }
 
@@ -21,11 +20,9 @@ export function MagneticButton({
   children,
   className,
   strength = 0.3,
-  as: Tag = 'button',
   onClick,
 }: MagneticButtonProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const [isHovered, setIsHovered] = useState(false)
 
   const x = useSpring(0, { stiffness: 300, damping: 30 })
   const y = useSpring(0, { stiffness: 300, damping: 30 })
@@ -40,7 +37,6 @@ export function MagneticButton({
   }
 
   function onMouseLeave() {
-    setIsHovered(false)
     x.set(0)
     y.set(0)
   }
@@ -51,7 +47,6 @@ export function MagneticButton({
       style={{ x, y }}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
-      onMouseEnter={() => setIsHovered(true)}
       className={cn('inline-block', className)}
       onClick={onClick}
     >
