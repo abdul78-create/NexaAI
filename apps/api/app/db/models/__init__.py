@@ -16,6 +16,7 @@ from app.db.models.image_analysis import ImageAnalysis
 from app.db.models.usage import AIUsageLog
 from app.db.models.speech import SpeechTranscription
 from app.db.models.preferences import UserPreferences
+from app.db.models.share import ConversationShare
 
 
 class SystemMetadata(Base, TimestampMixin):
@@ -50,5 +51,6 @@ __all__ = [
     "AIUsageLog",
     "SpeechTranscription",
     "UserPreferences",
+    "ConversationShare",
 ]
 

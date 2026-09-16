@@ -12,6 +12,8 @@ from app.api.v1.settings import router as settings_router
 from app.api.v1.speech import router as speech_router
 from app.api.v1.system import router as system_router
 from app.api.v1.usage import router as usage_router
+from app.api.v1.search import router as search_router
+from app.api.v1.share import router as share_router
 
 api_v1_router = APIRouter()
 
@@ -27,5 +29,7 @@ api_v1_router.include_router(images_router)
 api_v1_router.include_router(speech_router)
 api_v1_router.include_router(usage_router)
 api_v1_router.include_router(settings_router)
+api_v1_router.include_router(search_router)
+api_v1_router.include_router(share_router)
 
 

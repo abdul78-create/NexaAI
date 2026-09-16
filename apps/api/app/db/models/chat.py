@@ -53,6 +53,13 @@ class Conversation(Base, TimestampMixin):
         order_by="ChatMessage.created_at",
         lazy="selectin",
     )
+    shares: Mapped[List["ConversationShare"]] = relationship(  # type: ignore # noqa: F821
+        "ConversationShare",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        order_by="ConversationShare.created_at.desc()",
+        lazy="selectin",
+    )
 
     def __repr__(self) -> str:
         return f"<Conversation {self.id} ({self.title})>"

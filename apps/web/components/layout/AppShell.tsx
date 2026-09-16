@@ -20,12 +20,14 @@ import {
   X,
   LogIn,
   LogOut,
+  Search,
 } from 'lucide-react'
 import { useChat } from '@/hooks/useChat'
 import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ConversationList } from '@/components/chat/ConversationList'
+import { GlobalSearchDialog } from '@/components/search/GlobalSearchDialog'
 import { cn } from '@/lib/utils'
 import { slideInLeft } from '@/lib/animations'
 
@@ -42,17 +44,16 @@ const secondaryNav = [
   { href: '/app/settings', icon: Settings, label: 'Settings' },
 ]
 
-
-
 /* ============================================================
    SIDEBAR COMPONENT
    ============================================================ */
 interface SidebarProps {
   isMobile?: boolean
   onClose?: () => void
+  onOpenSearch?: () => void
 }
 
-export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
+export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProps) {
   const pathname = usePathname()
   const {
     groupedConversations,
@@ -131,34 +132,71 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
         )}
       </div>
 
-      {/* New Chat Button */}
-      <div className={cn('p-3 pb-2', !isMobile && isSidebarCollapsed && 'p-2')}>
+      {/* Action Buttons: New Chat & Global Search */}
+      <div className={cn('p-3 pb-2 space-y-1.5', !isMobile && isSidebarCollapsed && 'p-2 space-y-1')}>
         {!isMobile && isSidebarCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  size="icon"
-                  onClick={handleCreateNewChat}
-                  className="w-full h-9 gradient-brand border-0 text-white shadow-md hover:opacity-90 active:scale-95"
-                  aria-label="New chat"
-                >
-                  <Plus className="size-4" />
-                </Button>
-              }
-            />
-            <TooltipContent side="right" className="text-xs">
-              New chat
-            </TooltipContent>
-          </Tooltip>
+          <>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    size="icon"
+                    onClick={handleCreateNewChat}
+                    className="w-full h-9 gradient-brand border-0 text-white shadow-md hover:opacity-90 active:scale-95"
+                    aria-label="New chat"
+                  >
+                    <Plus className="size-4" />
+                  </Button>
+                }
+              />
+              <TooltipContent side="right" className="text-xs">
+                New chat
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onOpenSearch}
+                    className="w-full h-9 hover:bg-white/5 text-muted-foreground hover:text-foreground"
+                    aria-label="Global Search"
+                  >
+                    <Search className="size-4 text-indigo-400" />
+                  </Button>
+                }
+              />
+              <TooltipContent side="right" className="text-xs">
+                Global Search (Cmd+K)
+              </TooltipContent>
+            </Tooltip>
+          </>
         ) : (
-          <Button
-            onClick={handleCreateNewChat}
-            className="w-full h-9 gradient-brand border-0 text-white text-xs font-medium shadow-md hover:opacity-90 active:scale-95 flex items-center justify-center gap-2"
-          >
-            <Plus className="size-4" />
-            <span>New chat</span>
-          </Button>
+          <>
+            <Button
+              onClick={handleCreateNewChat}
+              className="w-full h-9 gradient-brand border-0 text-white text-xs font-medium shadow-md hover:opacity-90 active:scale-95 flex items-center justify-center gap-2"
+            >
+              <Plus className="size-4" />
+              <span>New chat</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={onOpenSearch}
+              className="w-full h-8 text-xs font-normal border-white/10 hover:bg-white/5 text-muted-foreground hover:text-foreground justify-between px-2.5"
+            >
+              <div className="flex items-center gap-2">
+                <Search className="size-3.5 text-indigo-400" />
+                <span>Search chats...</span>
+              </div>
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-muted/50 border border-white/10 rounded text-muted-foreground">
+                ⌘K
+              </kbd>
+            </Button>
+          </>
         )}
       </div>
 
@@ -342,7 +380,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
 /* ============================================================
    MOBILE SIDEBAR DRAWER
    ============================================================ */
-function MobileDrawer() {
+function MobileDrawer({ onOpenSearch }: { onOpenSearch: () => void }) {
   const { isMobileSidebarOpen, setMobileSidebarOpen } = useChat()
 
   return (
@@ -367,7 +405,7 @@ function MobileDrawer() {
             exit="hidden"
             className="fixed inset-y-0 left-0 z-50 w-72 bg-sidebar border-r border-white/6 md:hidden flex flex-col"
           >
-            <Sidebar isMobile onClose={() => setMobileSidebarOpen(false)} />
+            <Sidebar isMobile onClose={() => setMobileSidebarOpen(false)} onOpenSearch={onOpenSearch} />
           </motion.div>
         </>
       )}
@@ -379,24 +417,41 @@ function MobileDrawer() {
    APP SHELL
    ============================================================ */
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const [isSearchOpen, setIsSearchOpen] = React.useState(false)
+
   React.useEffect(() => {
     useAuthStore.getState().checkAuth()
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setIsSearchOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
       {/* Desktop sidebar */}
       <div className="hidden md:flex h-full">
-        <Sidebar />
+        <Sidebar onOpenSearch={() => setIsSearchOpen(true)} />
       </div>
 
       {/* Mobile drawer */}
-      <MobileDrawer />
+      <MobileDrawer onOpenSearch={() => setIsSearchOpen(true)} />
 
       {/* Main content container */}
       <div className="flex flex-1 flex-col min-w-0 h-full overflow-hidden">
         {children}
       </div>
+
+      {/* Global Search Dialog */}
+      <GlobalSearchDialog
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      />
     </div>
   )
 }

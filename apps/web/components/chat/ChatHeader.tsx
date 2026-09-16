@@ -1,19 +1,23 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import {
   Menu,
   Home,
   Trash2,
   Sparkles,
+  Share2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
+import { ExportMenu } from '@/components/chat/ExportMenu'
+import { ShareDialog } from '@/components/chat/ShareDialog'
 
 interface ChatHeaderProps {
+  conversationId?: string
   title?: string
   modelName: string
   hasMessages: boolean
@@ -22,12 +26,15 @@ interface ChatHeaderProps {
 }
 
 export function ChatHeader({
+  conversationId,
   title = 'New conversation',
   modelName,
   hasMessages,
   onClearChat,
   onToggleMobileMenu,
 }: ChatHeaderProps) {
+  const [isShareOpen, setIsShareOpen] = useState(false)
+
   return (
     <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-white/6 bg-background/80 backdrop-blur-md px-4 gap-3 z-10">
       {/* Left: Mobile menu toggle + Title + Model Badge */}
@@ -58,6 +65,21 @@ export function ChatHeader({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1.5">
+        {conversationId && hasMessages && (
+          <>
+            <ExportMenu conversationId={conversationId} />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsShareOpen(true)}
+              className="h-8 px-2.5 gap-1.5 text-xs font-medium border-white/10 hover:bg-white/5"
+            >
+              <Share2 className="size-3.5 text-brand" />
+              <span className="hidden sm:inline">Share</span>
+            </Button>
+          </>
+        )}
+
         {hasMessages && (
           <Tooltip>
             <TooltipTrigger
@@ -101,6 +123,14 @@ export function ChatHeader({
           </TooltipContent>
         </Tooltip>
       </div>
+
+      {conversationId && (
+        <ShareDialog
+          conversationId={conversationId}
+          isOpen={isShareOpen}
+          onClose={() => setIsShareOpen(false)}
+        />
+      )}
     </header>
   )
 }
