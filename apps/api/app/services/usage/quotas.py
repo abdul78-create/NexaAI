@@ -1,7 +1,7 @@
 """Quota Enforcement Service for Phase 15 AI Operations."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.usage import AIUsageLog
 from app.db.models.attachment import Attachment
+
 
 
 # Default static quota limits (per user per day)
@@ -74,8 +75,9 @@ class QuotaService:
         storage_bytes = res_storage.scalar() or 0
 
         # Calculate next reset time (tomorrow at 00:00 UTC)
-        next_reset = start_of_day.replace(day=start_of_day.day + 1) if start_of_day.day < 28 else start_of_day
+        next_reset = start_of_day + timedelta(days=1)
         resets_at_str = next_reset.isoformat()
+
 
         return {
             "requests_today": requests_count,
