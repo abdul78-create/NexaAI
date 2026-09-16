@@ -41,13 +41,23 @@ async def stream_chat(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    """Stream AI chat completion for authenticated user via text/event-stream."""
-    generator = generate_chat_sse_stream(
-        db=db,
+    """Stream multimodal AI chat completion for authenticated user via text/event-stream."""
+    from app.services.ai.orchestrator import MultimodalAIOrchestrator
+
+    orchestrator = MultimodalAIOrchestrator(db)
+    attachment_list = (
+        [att.model_dump() for att in payload.attachments]
+        if payload.attachments
+        else []
+    )
+
+    generator = orchestrator.generate_multimodal_sse_stream(
         user_id=current_user.id,
         conversation_id=payload.conversation_id,
         user_prompt=payload.content,
         model_id=payload.model or "nexa-standard",
+        attachment_inputs=attachment_list,
+        options=payload.options or {},
     )
 
     return StreamingResponse(
@@ -59,6 +69,7 @@ async def stream_chat(
             "X-Accel-Buffering": "no",
         },
     )
+
 
 
 @router.get(

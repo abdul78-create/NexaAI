@@ -8,12 +8,14 @@ from app.db.base import Base, TimestampMixin
 from app.db.models.auth import RefreshToken
 from app.db.models.user import User
 from app.db.models.chat import Conversation, ChatMessage
+from app.db.models.chat_message_attachment import ChatMessageAttachment
 from app.db.models.nlp import NLPAnalysis
 from app.db.models.document import Document, DocumentChunk
 from app.db.models.attachment import Attachment
 from app.db.models.image_analysis import ImageAnalysis
 from app.db.models.usage import AIUsageLog
 from app.db.models.speech import SpeechTranscription
+from app.db.models.preferences import UserPreferences
 
 
 class SystemMetadata(Base, TimestampMixin):
@@ -39,6 +41,7 @@ __all__ = [
     "SystemMetadata",
     "Conversation",
     "ChatMessage",
+    "ChatMessageAttachment",
     "NLPAnalysis",
     "Document",
     "DocumentChunk",
@@ -46,4 +49,6 @@ __all__ = [
     "ImageAnalysis",
     "AIUsageLog",
     "SpeechTranscription",
+    "UserPreferences",
 ]
+

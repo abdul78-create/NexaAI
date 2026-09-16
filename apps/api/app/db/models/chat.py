@@ -110,6 +110,14 @@ class ChatMessage(Base, TimestampMixin):
         "Conversation",
         back_populates="messages",
     )
+    message_attachments: Mapped[List["ChatMessageAttachment"]] = relationship(  # type: ignore # noqa: F821
+        "ChatMessageAttachment",
+        back_populates="message",
+        cascade="all, delete-orphan",
+        order_by="ChatMessageAttachment.display_order",
+        lazy="selectin",
+    )
 
     def __repr__(self) -> str:
         return f"<ChatMessage {self.id} [{self.role}]>"
+

@@ -13,6 +13,7 @@ import {
   Sparkles,
   Image as ImageIcon,
   Mic,
+  Settings,
   Plus,
   PanelLeftClose,
   PanelLeftOpen,
@@ -38,7 +39,9 @@ const secondaryNav = [
   { href: '/app/docs', icon: FileText, label: 'Documents', badge: 'RAG' },
   { href: '/app/prompts', icon: BookOpen, label: 'Prompt Library' },
   { href: '/app/usage', icon: BarChart3, label: 'Usage' },
+  { href: '/app/settings', icon: Settings, label: 'Settings' },
 ]
+
 
 
 /* ============================================================

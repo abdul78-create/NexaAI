@@ -57,11 +57,19 @@ class ConversationDetailResponse(ConversationResponse):
     messages: List[MessageResponse] = []
 
 
+class AttachmentInputItem(BaseModel):
+    """Attachment input item reference."""
+    attachment_id: UUID = Field(..., description="UUID of ready attachment.")
+    kind: Optional[str] = Field("image", description="Attachment kind: image | document | audio.")
+
+
 class ChatStreamRequest(BaseModel):
-    """Input payload for stream completion endpoint."""
+    """Input payload for stream completion endpoint with multimodal support."""
     conversation_id: Optional[UUID] = Field(None, description="Existing conversation ID or None to start a new one.")
     content: str = Field(..., min_length=1, description="User prompt text.")
     model: Optional[str] = Field("nexa-standard", description="Selected model identifier.")
+    attachments: Optional[List[AttachmentInputItem]] = Field(default_factory=list, description="Optional multimodal attachments.")
+    options: Optional[dict] = Field(default_factory=dict, description="Execution flags (use_ocr, use_rag, etc.).")
 
 
 class ModelInfoResponse(BaseModel):
@@ -75,3 +83,4 @@ class ModelInfoResponse(BaseModel):
     reasoning: str
     contextWindow: str
     isAvailable: bool
+
