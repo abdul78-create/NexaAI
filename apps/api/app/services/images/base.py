@@ -24,6 +24,11 @@ class UnsupportedImageFormatError(ImageProcessingError):
     pass
 
 
+class ProviderNotConfiguredError(ImageProcessingError):
+    """Raised when a requested real provider engine is unconfigured or unavailable."""
+    pass
+
+
 @dataclass
 class ImageMetadata:
     """Extracted metadata for a decoded image."""
@@ -67,6 +72,8 @@ class OCRResult:
     language: str
     word_count: int
     blocks: List[OCRBoundingBox] = field(default_factory=list)
+    provider: str = "mock"
+    is_mock: bool = True
 
 
 @dataclass
@@ -78,3 +85,8 @@ class VisionAnalysisResult:
     objects_detected: List[str] = field(default_factory=list)
     suggested_actions: List[str] = field(default_factory=list)
     raw_response: Optional[Dict[str, Any]] = None
+    provider: str = "mock"
+    is_mock: bool = True
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    model_name: str = "gpt-4o"

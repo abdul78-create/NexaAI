@@ -1,4 +1,4 @@
-"""Pydantic schemas for Phase 11 Image Intelligence API."""
+"""Pydantic schemas for Phase 11 & 12 Image Intelligence API."""
 
 from datetime import datetime
 from typing import Dict, List, Optional, Any
@@ -22,7 +22,7 @@ class ImageOCRRequest(BaseModel):
     """Payload to trigger OCR text extraction."""
 
     attachment_id: UUID = Field(..., description="ID of a ready image attachment.")
-    language: Optional[str] = Field("en", description="Optional language code (e.g. 'en', 'es', 'fr').")
+    language: Optional[str] = Field("eng", description="Optional language code (e.g. 'eng', 'spa', 'fra').")
 
 
 class ImageProcessRequest(BaseModel):
@@ -70,6 +70,8 @@ class OCRResultSchema(BaseModel):
     language: str
     word_count: int
     blocks: List[OCRBoundingBoxSchema] = Field(default_factory=list)
+    provider: str = "mock"
+    is_mock: bool = True
 
 
 class VisionAnalysisResponse(BaseModel):
@@ -85,6 +87,8 @@ class VisionAnalysisResponse(BaseModel):
     objects_detected: List[str] = Field(default_factory=list)
     suggested_actions: List[str] = Field(default_factory=list)
     quality: QualityMetricsSchema
+    provider: str = "mock"
+    is_mock: bool = True
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -98,6 +102,8 @@ class OCRAnalysisResponse(BaseModel):
     analysis_type: str = "ocr"
     ocr_result: OCRResultSchema
     quality: QualityMetricsSchema
+    provider: str = "mock"
+    is_mock: bool = True
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -115,6 +121,8 @@ class ImageProcessResponse(BaseModel):
     height: int
     format: str
     quality: QualityMetricsSchema
+    provider: str = "opencv"
+    is_mock: bool = False
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

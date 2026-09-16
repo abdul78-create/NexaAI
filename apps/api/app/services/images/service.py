@@ -1,6 +1,7 @@
 """Image Intelligence Orchestrator Service."""
 
 import json
+import time
 import uuid
 from typing import List, Optional, Tuple, Dict, Any
 from fastapi import HTTPException
@@ -17,6 +18,7 @@ from app.services.images.base import (
     OCRResult,
     VisionAnalysisResult,
     ImageProcessingError,
+    ProviderNotConfiguredError,
 )
 from app.services.images.quality import calculate_image_quality
 from app.services.images.preprocessing import (
@@ -27,18 +29,21 @@ from app.services.images.preprocessing import (
     convert_format,
     enhance_document_image,
 )
-from app.services.images.ocr import BaseOCRProvider, MockOCRProvider
+from app.services.images.ocr import BaseOCRProvider, MockOCRProvider, TesseractOCRProvider
 from app.services.images.providers.vision import BaseVisionProvider, OpenAIVisionProvider
 from app.services.images.providers.mock import MockVisionProvider
+from app.services.usage.service import UsageService
 
 
 def get_ocr_provider() -> BaseOCRProvider:
-    """Factory resolver for configured OCR provider."""
+    """Factory resolver for configured OCR provider with fallback."""
+    if settings.OCR_PROVIDER == "tesseract":
+        return TesseractOCRProvider()
     return MockOCRProvider()
 
 
 def get_vision_provider() -> BaseVisionProvider:
-    """Factory resolver for configured Vision AI provider."""
+    """Factory resolver for configured Vision AI provider with fallback."""
     if settings.VISION_PROVIDER == "openai" and settings.OPENAI_API_KEY:
         return OpenAIVisionProvider()
     return MockVisionProvider()
@@ -46,7 +51,8 @@ def get_vision_provider() -> BaseVisionProvider:
 
 class ImageService:
     """
-    Main Service managing image processing, OCR, Vision AI, and history persistence.
+    Main Service managing image processing, OCR, Vision AI, history persistence,
+    and execution usage telemetry.
     Operates on existing Phase 10 Attachment records.
     """
 
@@ -56,11 +62,13 @@ class ImageService:
         storage: BaseStorageProvider,
         ocr_provider: Optional[BaseOCRProvider] = None,
         vision_provider: Optional[BaseVisionProvider] = None,
+        usage_service: Optional[UsageService] = None,
     ):
         self.db = db
         self.storage = storage
         self.ocr_provider = ocr_provider or get_ocr_provider()
         self.vision_provider = vision_provider or get_vision_provider()
+        self.usage_service = usage_service or UsageService(db)
 
     async def _get_and_validate_attachment(
         self,
@@ -94,14 +102,46 @@ class ImageService:
         prompt: Optional[str] = None,
         model: Optional[str] = None,
     ) -> Tuple[ImageAnalysis, VisionAnalysisResult, QualityMetrics]:
-        """Perform Vision AI description or question answering and persist record."""
+        """Perform Vision AI description or question answering, log telemetry, and persist record."""
         attachment, image_bytes = await self._get_and_validate_attachment(attachment_id, user_id)
+        start_time = time.time()
 
         quality = calculate_image_quality(image_bytes)
-        if prompt:
-            vision_res = await self.vision_provider.answer_image_question(image_bytes, prompt, model)
-        else:
-            vision_res = await self.vision_provider.describe_image(image_bytes, model)
+
+        try:
+            if prompt:
+                vision_res = await self.vision_provider.answer_image_question(image_bytes, prompt, model)
+            else:
+                vision_res = await self.vision_provider.describe_image(image_bytes, model)
+            exec_status = "success"
+            err_code = None
+        except Exception as exc:
+            duration_ms = int((time.time() - start_time) * 1000)
+            await self.usage_service.log_usage(
+                user_id=user_id,
+                feature_type="vision",
+                provider=getattr(self.vision_provider, "provider", "unknown"),
+                model_name=model or settings.VISION_MODEL,
+                execution_duration_ms=duration_ms,
+                status="error",
+                error_code=type(exc).__name__,
+            )
+            raise
+
+        duration_ms = int((time.time() - start_time) * 1000)
+
+        # Log AI Usage telemetry
+        await self.usage_service.log_usage(
+            user_id=user_id,
+            feature_type="vision",
+            provider=vision_res.provider,
+            model_name=vision_res.model_name,
+            prompt_tokens=vision_res.prompt_tokens,
+            completion_tokens=vision_res.completion_tokens,
+            execution_duration_ms=duration_ms,
+            status=exec_status,
+            error_code=err_code,
+        )
 
         result_dict = {
             "description": vision_res.description,
@@ -109,6 +149,8 @@ class ImageService:
             "tags": vision_res.tags,
             "objects_detected": vision_res.objects_detected,
             "suggested_actions": vision_res.suggested_actions,
+            "provider": vision_res.provider,
+            "is_mock": vision_res.is_mock,
         }
 
         metadata_dict = {
@@ -119,6 +161,8 @@ class ImageService:
             "is_blurry": quality.is_blurry,
             "brightness": quality.brightness,
             "contrast": quality.contrast,
+            "provider": vision_res.provider,
+            "is_mock": vision_res.is_mock,
         }
 
         record = ImageAnalysis(
@@ -143,17 +187,39 @@ class ImageService:
         user_id: uuid.UUID,
         language: Optional[str] = None,
     ) -> Tuple[ImageAnalysis, OCRResult]:
-        """Extract text via OCR provider and persist record."""
+        """Extract text via OCR provider, log telemetry, and persist record."""
         attachment, image_bytes = await self._get_and_validate_attachment(attachment_id, user_id)
+        start_time = time.time()
 
-        ocr_res = await self.ocr_provider.extract_text(image_bytes, language=language)
+        try:
+            ocr_res = await self.ocr_provider.extract_text(image_bytes, language=language)
+        except ProviderNotConfiguredError as exc:
+            # Fallback to MockOCRProvider if configured engine fails
+            mock = MockOCRProvider()
+            ocr_res = await mock.extract_text(image_bytes, language=language)
+
+        duration_ms = int((time.time() - start_time) * 1000)
         quality = calculate_image_quality(image_bytes)
+
+        # Log OCR Usage Telemetry
+        await self.usage_service.log_usage(
+            user_id=user_id,
+            feature_type="ocr",
+            provider=ocr_res.provider,
+            model_name=ocr_res.provider,
+            prompt_tokens=0,
+            completion_tokens=ocr_res.word_count,
+            execution_duration_ms=duration_ms,
+            status="success",
+        )
 
         result_dict = {
             "extracted_text": ocr_res.extracted_text,
             "confidence": ocr_res.confidence,
             "language": ocr_res.language,
             "word_count": ocr_res.word_count,
+            "provider": ocr_res.provider,
+            "is_mock": ocr_res.is_mock,
             "blocks": [
                 {
                     "text": b.text,
@@ -171,6 +237,8 @@ class ImageService:
             "width": quality.width,
             "height": quality.height,
             "blur_score": quality.blur_score,
+            "provider": ocr_res.provider,
+            "is_mock": ocr_res.is_mock,
         }
 
         record = ImageAnalysis(
@@ -256,6 +324,8 @@ class ImageService:
             "width": meta.width,
             "height": meta.height,
             "format": meta.format,
+            "provider": "opencv",
+            "is_mock": False,
         }
         metadata_dict = {
             "width": quality.width,
@@ -263,6 +333,8 @@ class ImageService:
             "blur_score": quality.blur_score,
             "brightness": quality.brightness,
             "contrast": quality.contrast,
+            "provider": "opencv",
+            "is_mock": False,
         }
 
         record = ImageAnalysis(

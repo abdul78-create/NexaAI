@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion } from 'motion/react'
-import { FileText, Copy, Check, ScanLine } from 'lucide-react'
+import { FileText, Copy, Check, ScanLine, Download, ShieldAlert, Cpu } from 'lucide-react'
 import { OCRAnalysisResponse } from '@/lib/images-api'
 import { Button } from '@/components/ui/button'
 
@@ -21,6 +21,19 @@ export function OCRResultPanel({ onExtractOCR, result, isLoading }: OCRResultPan
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
+  }
+
+  const handleDownloadTxt = () => {
+    if (!result?.ocr_result?.extracted_text) return
+    const blob = new Blob([result.ocr_result.extracted_text], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ocr_extracted_${Date.now()}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -47,8 +60,27 @@ export function OCRResultPanel({ onExtractOCR, result, isLoading }: OCRResultPan
           animate={{ opacity: 1, y: 0 }}
           className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3"
         >
+          {/* Provider Badge */}
+          <div className="flex items-center justify-between border-b border-white/6 pb-2 text-[11px]">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Cpu className="size-3.5 text-brand" />
+              <span>Provider: <strong className="text-foreground uppercase font-mono">{result.provider}</strong></span>
+            </div>
+
+            {result.is_mock ? (
+              <span className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <ShieldAlert className="size-3" />
+                Mock Mode (Dev/Test)
+              </span>
+            ) : (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Tesseract OCR Engine
+              </span>
+            )}
+          </div>
+
           {/* Metadata bar */}
-          <div className="flex items-center justify-between border-b border-white/6 pb-2 text-[11px] text-muted-foreground">
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <div className="flex items-center gap-3">
               <span>Words: <strong className="text-foreground font-mono">{result.ocr_result.word_count}</strong></span>
               <span>Lang: <strong className="text-foreground font-mono uppercase">{result.ocr_result.language}</strong></span>
@@ -70,16 +102,28 @@ export function OCRResultPanel({ onExtractOCR, result, isLoading }: OCRResultPan
 
           {/* Extracted text container */}
           <div className="relative group">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleCopy}
-              className="absolute top-2 right-2 size-7 rounded-md bg-black/40 text-muted-foreground hover:text-foreground border border-white/10"
-              title="Copy text"
-            >
-              {copied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
-            </Button>
-            <pre className="text-xs font-mono text-foreground bg-black/40 border border-white/6 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap leading-relaxed max-h-60 scrollbar-none">
+            <div className="absolute top-2 right-2 flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDownloadTxt}
+                className="size-7 rounded-md bg-black/40 text-muted-foreground hover:text-foreground border border-white/10"
+                title="Download .txt"
+              >
+                <Download className="size-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCopy}
+                className="size-7 rounded-md bg-black/40 text-muted-foreground hover:text-foreground border border-white/10"
+                title="Copy text"
+              >
+                {copied ? <Check className="size-3.5 text-emerald-400" /> : <Copy className="size-3.5" />}
+              </Button>
+            </div>
+
+            <pre className="text-xs font-mono text-foreground bg-black/40 border border-white/6 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap leading-relaxed max-h-60 scrollbar-none pr-20">
               {result.ocr_result.extracted_text}
             </pre>
           </div>

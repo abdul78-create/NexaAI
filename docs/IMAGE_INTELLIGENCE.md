@@ -1,4 +1,4 @@
-# NexaAI Image Intelligence Architecture (Phase 11)
+# NexaAI Image Intelligence Architecture (Phase 11 & Phase 12)
 
 This document describes the design and integration of the **Image Intelligence** module in NexaAI.
 
@@ -7,6 +7,7 @@ This document describes the design and integration of the **Image Intelligence**
 ## 1. Executive Summary
 
 Phase 11 extends NexaAI's multimodal foundation (Phase 10) by providing automated image analysis, computer vision operations via OpenCV/Pillow, optical character recognition (OCR), and Vision AI provider integration.
+Phase 12 elevates OCR and Vision AI into **production-grade functionality** with real engine integrations (Tesseract OCR & OpenAI GPT-4o Vision), exponential backoff retries, telemetry usage logging (`AIUsageLog`), and explicit mock-mode state indicators.
 
 The implementation builds strictly on the Phase 10 attachment infrastructure and storage abstractions.
 
@@ -19,24 +20,27 @@ apps/api/app/
 ├── api/v1/
 │   └── images.py                # REST endpoints (/analyze, /ocr, /process, /history)
 ├── db/models/
-│   └── image_analysis.py        # ImageAnalysis SQLAlchemy model
+│   ├── image_analysis.py        # ImageAnalysis SQLAlchemy model
+│   └── usage.py                 # AIUsageLog SQLAlchemy telemetry model
 ├── schemas/
 │   └── images.py                # Typed Pydantic request & response schemas
 ├── services/
+│   ├── usage/
+│   │   └── service.py           # Usage tracking service
 │   └── images/
 │       ├── __init__.py
 │       ├── base.py              # Metadata definitions & custom exception types
 │       ├── preprocessing.py     # Resize, rotate, crop, compress, format convert, doc enhance
 │       ├── quality.py           # Blur detection (Laplacian variance), brightness, contrast
-│       ├── ocr.py               # BaseOCRProvider ABC & MockOCRProvider implementation
-│       ├── analysis.py          # Orchestration pipeline
+│       ├── ocr.py               # BaseOCRProvider ABC, TesseractOCRProvider & MockOCRProvider
 │       ├── service.py           # ImageService main database-backed orchestrator
 │       └── providers/
 │           ├── __init__.py
-│           ├── vision.py        # BaseVisionProvider ABC & OpenAIVisionProvider
+│           ├── vision.py        # BaseVisionProvider ABC & OpenAIVisionProvider (retries & usage)
 │           └── mock.py          # MockVisionProvider for offline dev/tests
 └── tests/
-    └── test_images.py           # Comprehensive pytest suite
+    ├── test_images.py           # Phase 11 unit & API tests
+    └── test_phase12_production_images.py # Phase 12 production provider & telemetry tests
 ```
 
 ---
@@ -62,17 +66,21 @@ Server-side image operations strictly decode user images in memory using Pillow 
 
 ---
 
-## 4. Provider Abstractions
+## 4. Provider Abstractions & Phase 12 Enhancements
 
 ### 4.1 OCR Provider (`BaseOCRProvider`)
 Defines the `extract_text(image_bytes: bytes, language: Optional[str] = None)` method.
-- **`MockOCRProvider`**: Used in unit tests and development when external OCR engines are absent. Returns structured text blocks, bounding boxes, and confidence scores.
-- **Extensible Integration**: Designed to plug into cloud vision services (Google Cloud Vision, AWS Rekognition) or local engines (Tesseract / PaddleOCR).
+- **`TesseractOCRProvider`**: Real local OCR provider invoking `pytesseract` / Tesseract OCR engine. Computes text blocks, confidence scores, and word bounding boxes. Gracefully falls back or raises `ProviderNotConfiguredError` if Tesseract binaries are uninstalled.
+- **`MockOCRProvider`**: Used in unit tests and offline dev mode. Returns structured text blocks, bounding boxes, and confidence scores with `is_mock = True`.
 
 ### 4.2 Vision AI Provider (`BaseVisionProvider`)
 Defines `describe_image`, `answer_image_question`, and `analyze_image`.
-- **`OpenAIVisionProvider`**: Converts image bytes into base64 payload objects passed to OpenAI `gpt-4o` vision endpoints.
-- **`MockVisionProvider`**: Cost-free, reliable implementation for tests and guest mode.
+- **`OpenAIVisionProvider`**: Encodes image bytes as base64 data URLs transmitted to OpenAI `gpt-4o` vision endpoints. Enhanced in Phase 12 with:
+  - Strict `VISION_TIMEOUT_SECONDS` timeouts
+  - 2-stage exponential backoff for HTTP 502/503/504 transient network errors
+  - Token tracking (`usage.prompt_tokens`, `usage.completion_tokens`)
+  - Explicit `"provider": "openai"` and `"is_mock": false` response metadata
+- **`MockVisionProvider`**: Cost-free, reliable implementation for tests and guest mode with `"provider": "mock"` and `"is_mock": true`.
 
 ---
 
@@ -88,6 +96,8 @@ Defines `describe_image`, `answer_image_question`, and `analyze_image`.
    Internal `storage_key` paths are kept encapsulated within backend storage services and are never rendered to clients or logs.
 5. **Ownership Enforcement**:
    All image operations verify that `attachment.user_id == current_user.id`.
+6. **Backend-Only Secrets**:
+   `OPENAI_API_KEY` is strictly maintained within backend settings and never exposed to client bundles.
 
 ---
 

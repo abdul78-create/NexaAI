@@ -31,6 +31,8 @@ export interface OCRResult {
   language: string
   word_count: number
   blocks: OCRBoundingBox[]
+  provider: string
+  is_mock: boolean
 }
 
 export interface VisionAnalysisResponse {
@@ -44,6 +46,8 @@ export interface VisionAnalysisResponse {
   objects_detected: string[]
   suggested_actions: string[]
   quality: QualityMetrics
+  provider: string
+  is_mock: boolean
   created_at: string
 }
 
@@ -53,6 +57,8 @@ export interface OCRAnalysisResponse {
   analysis_type: string
   ocr_result: OCRResult
   quality: QualityMetrics
+  provider: string
+  is_mock: boolean
   created_at: string
 }
 

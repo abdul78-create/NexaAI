@@ -99,6 +99,8 @@ async def analyze_image(
             height=quality.height,
             aspect_ratio=quality.aspect_ratio,
         ),
+        provider=vision_res.provider,
+        is_mock=vision_res.is_mock,
         created_at=record.created_at,
     )
 
@@ -152,6 +154,8 @@ async def extract_ocr(
             confidence=ocr_res.confidence,
             language=ocr_res.language,
             word_count=ocr_res.word_count,
+            provider=ocr_res.provider,
+            is_mock=ocr_res.is_mock,
             blocks=[
                 OCRBoundingBoxSchema(
                     text=b.text,
@@ -173,6 +177,8 @@ async def extract_ocr(
             height=meta.get("height", 0),
             aspect_ratio=1.0,
         ),
+        provider=ocr_res.provider,
+        is_mock=ocr_res.is_mock,
         created_at=record.created_at,
     )
 

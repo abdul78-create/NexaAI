@@ -2,11 +2,10 @@
 
 import React, { useState } from 'react'
 import { motion } from 'motion/react'
-import { Sparkles, Send, Tag, Lightbulb, Box } from 'lucide-react'
+import { Sparkles, Send, Tag, Lightbulb, Box, ShieldAlert, Cpu } from 'lucide-react'
 import { VisionAnalysisResponse } from '@/lib/images-api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
 
 interface ImageAnalysisPanelProps {
   onAnalyze: (prompt?: string) => Promise<void>
@@ -31,7 +30,7 @@ export function ImageAnalysisPanel({ onAnalyze, result, isLoading }: ImageAnalys
             <Sparkles className="size-3.5 text-brand" />
             <span>AI Vision AI Understanding</span>
           </label>
-          <span className="text-[10px] text-muted-foreground">GPT-4o Vision</span>
+          <span className="text-[10px] text-muted-foreground font-mono">gpt-4o</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -60,6 +59,25 @@ export function ImageAnalysisPanel({ onAnalyze, result, isLoading }: ImageAnalys
           animate={{ opacity: 1, y: 0 }}
           className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-4"
         >
+          {/* Provider & Mock Mode Badge */}
+          <div className="flex items-center justify-between border-b border-white/6 pb-2 text-[11px]">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
+              <Cpu className="size-3.5 text-brand" />
+              <span>Provider: <strong className="text-foreground uppercase font-mono">{result.provider}</strong></span>
+            </div>
+
+            {result.is_mock ? (
+              <span className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <ShieldAlert className="size-3" />
+                Mock Mode (Dev/Test)
+              </span>
+            ) : (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Live Vision AI
+              </span>
+            )}
+          </div>
+
           {/* Description / Answer */}
           <div className="space-y-1">
             <h4 className="text-xs font-semibold text-foreground">

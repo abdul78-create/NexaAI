@@ -111,11 +111,18 @@ class Settings(BaseSettings):
     ENABLE_IMAGE_FEATURES: bool = True
     ENABLE_VOICE_FEATURES: bool = False  # enabled in Phase 13
 
-    # ── Phase 11: Image Intelligence ────────────────────────────────────────
+    # ── Phase 11 & 12: Image Intelligence & Production Providers ────────────
     MAX_IMAGE_WIDTH: int = 4096
     MAX_IMAGE_HEIGHT: int = 4096
-    OCR_PROVIDER: str = "mock"
-    VISION_PROVIDER: str = "openai"
+    OCR_PROVIDER: str = "mock"  # "tesseract" | "mock"
+    VISION_PROVIDER: str = "openai"  # "openai" | "mock"
+    OCR_DEFAULT_LANGUAGE: str = "eng"
+    VISION_MODEL: str = "gpt-4o"
+    VISION_TIMEOUT_SECONDS: float = 30.0
+    VISION_MAX_IMAGE_BYTES: int = 10_485_760  # 10 MB
+    VISION_MAX_PROMPT_LENGTH: int = 2000
+    VISION_MAX_OUTPUT_TOKENS: int = 1000
+    VISION_MAX_REQUESTS_PER_MINUTE: int = 60
 
 
 settings = Settings()

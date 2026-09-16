@@ -13,6 +13,7 @@ class MockVisionProvider(BaseVisionProvider):
     """
     Mock Vision AI Provider.
     Returns rich visual analysis and answers without external network overhead or API key requirements.
+    Explicitly tags responses with provider="mock" and is_mock=True.
     """
 
     async def describe_image(
@@ -33,6 +34,11 @@ class MockVisionProvider(BaseVisionProvider):
             objects_detected=["text-block", "graphic-element", "header-banner"],
             suggested_actions=["Extract OCR text", "Enhance contrast for print", "Convert format to WebP"],
             raw_response={"mock": True, "provider": "mock-vision"},
+            provider="mock",
+            is_mock=True,
+            prompt_tokens=25,
+            completion_tokens=45,
+            model_name="mock-vision-v1",
         )
 
     async def answer_image_question(
@@ -54,6 +60,11 @@ class MockVisionProvider(BaseVisionProvider):
             objects_detected=["question-target", "layout-container"],
             suggested_actions=["Copy answer", "Perform OCR"],
             raw_response={"mock": True, "question": question},
+            provider="mock",
+            is_mock=True,
+            prompt_tokens=30,
+            completion_tokens=50,
+            model_name="mock-vision-v1",
         )
 
     async def analyze_image(
@@ -76,4 +87,9 @@ class MockVisionProvider(BaseVisionProvider):
             objects_detected=["ui-container", "typography", "iconography"],
             suggested_actions=["Run document enhancement", "Run quality check"],
             raw_response={"mock": True, "prompt": prompt},
+            provider="mock",
+            is_mock=True,
+            prompt_tokens=20,
+            completion_tokens=40,
+            model_name="mock-vision-v1",
         )

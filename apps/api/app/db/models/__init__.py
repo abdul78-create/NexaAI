@@ -12,6 +12,7 @@ from app.db.models.nlp import NLPAnalysis
 from app.db.models.document import Document, DocumentChunk
 from app.db.models.attachment import Attachment
 from app.db.models.image_analysis import ImageAnalysis
+from app.db.models.usage import AIUsageLog
 
 
 class SystemMetadata(Base, TimestampMixin):
@@ -42,4 +43,5 @@ __all__ = [
     "DocumentChunk",
     "Attachment",
     "ImageAnalysis",
+    "AIUsageLog",
 ]
