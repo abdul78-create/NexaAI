@@ -25,14 +25,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(f"CORS Allowed Origins: {settings.CORS_ORIGINS}")
 
     # Verify initial database accessibility
-    is_db_ready = await check_db_connectivity()
-    if is_db_ready:
-        logger.info("PostgreSQL database connection: SUCCESS")
+    is_sqlite = "sqlite" in settings.DATABASE_URL
+    if is_sqlite:
+        from app.db.base import Base
+        import app.db.models  # noqa: F401
+        async with async_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Local SQLite database initialized: SUCCESS")
     else:
-        logger.warning(
-            "PostgreSQL database connection: OFFLINE. "
-            "Start infrastructure via 'docker compose -f infra/docker-compose.yml up -d' when ready."
-        )
+        is_db_ready = await check_db_connectivity()
+        if is_db_ready:
+            logger.info("PostgreSQL database connection: SUCCESS")
+        else:
+            logger.warning(
+                "PostgreSQL database connection: OFFLINE. "
+                "Start infrastructure via 'docker compose -f infra/docker-compose.yml up -d' when ready."
+            )
 
     yield
 

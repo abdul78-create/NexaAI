@@ -80,11 +80,11 @@ function Navbar() {
         {/* Actions */}
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Link href="/app" className="hidden sm:block">
+          <Link href="/login" className="hidden sm:block">
             <Button variant="ghost" size="sm" className="text-sm">Sign in</Button>
           </Link>
           <MagneticButton strength={0.25}>
-            <Link href="/app">
+            <Link href="/signup">
               <Button size="sm" className="gradient-brand border-0 text-white hover:opacity-90 shadow-lg text-sm">
                 Get started
                 <ArrowRight className="ml-1.5 size-3.5" />
@@ -261,7 +261,7 @@ function HeroSection() {
             {/* CTAs */}
             <div ref={ctaRef} className="hero-cta mt-10 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
               <MagneticButton strength={0.2}>
-                <Link href="/app">
+                <Link href="/signup">
                   <Button
                     size="lg"
                     className="group relative gradient-brand border-0 text-white h-13 px-8 text-base font-semibold shadow-2xl hover:opacity-90 transition-all overflow-hidden"
@@ -977,7 +977,7 @@ function CtaSection() {
         </p>
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
           <MagneticButton strength={0.2}>
-            <Link href="/app">
+            <Link href="/signup">
               <Button
                 size="lg"
                 className="group relative gradient-brand border-0 text-white h-14 px-10 text-base font-semibold shadow-2xl hover:opacity-90 overflow-hidden glow-brand"

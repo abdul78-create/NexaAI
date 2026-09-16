@@ -10,16 +10,25 @@ from sqlalchemy import text
 from app.core.config import settings
 from app.core.logging import logger
 
+# Configure engine parameters based on dialect (PostgreSQL vs SQLite)
+is_sqlite = "sqlite" in settings.DATABASE_URL
+engine_kwargs = {
+    "echo": settings.DEBUG and settings.APP_ENV == "development",
+    "future": True,
+}
+
+if not is_sqlite:
+    engine_kwargs.update(
+        {
+            "pool_size": settings.DB_POOL_SIZE,
+            "max_overflow": settings.DB_MAX_OVERFLOW,
+            "pool_timeout": settings.DB_POOL_TIMEOUT,
+            "pool_pre_ping": True,
+        }
+    )
+
 # Create asynchronous SQLAlchemy engine
-async_engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG and settings.APP_ENV == "development",
-    future=True,
-    pool_size=settings.DB_POOL_SIZE,
-    max_overflow=settings.DB_MAX_OVERFLOW,
-    pool_timeout=settings.DB_POOL_TIMEOUT,
-    pool_pre_ping=True,
-)
+async_engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
 
 # Create session factory bound to async engine
 AsyncSessionLocal = async_sessionmaker(

@@ -70,9 +70,9 @@ Retrieve system runtime metadata.
 
 ## 1. Authentication
 
-### POST `/auth/register`
+### POST `/api/v1/auth/register`
 
-Register a new user.
+Register a new user account with Argon2id-hashed credentials.
 
 **Request:**
 ```json
@@ -86,20 +86,23 @@ Register a new user.
 **Response `201`:**
 ```json
 {
-  "id": "uuid",
+  "id": "b6b4e60e-0c05-4e1c-88e0-d3980df8136a",
   "email": "user@example.com",
   "display_name": "Abdul",
-  "created_at": "2024-01-15T10:30:00Z"
+  "avatar_url": null,
+  "is_active": true,
+  "is_verified": false,
+  "created_at": "2026-09-16T11:26:39.897299"
 }
 ```
 
-**Errors:** `400 EMAIL_TAKEN`, `422 VALIDATION_ERROR`
+**Errors:** `400 Bad Request` (Email already taken), `422 Unprocessable Content` (Password complexity validation)
 
 ---
 
-### POST `/auth/login`
+### POST `/api/v1/auth/login`
 
-Authenticate and receive tokens.
+Authenticate email and password, issuing a JWT access token and an HttpOnly refresh cookie.
 
 **Request:**
 ```json
@@ -112,38 +115,46 @@ Authenticate and receive tokens.
 **Response `200`:**
 ```json
 {
-  "access_token": "eyJ...",
+  "access_token": "eyJhbGciOiJIUzI1NiIsIn...",
   "token_type": "bearer",
-  "expires_in": 900
+  "expires_in": 3600,
+  "user": {
+    "id": "b6b4e60e-0c05-4e1c-88e0-d3980df8136a",
+    "email": "user@example.com",
+    "display_name": "Abdul"
+  }
 }
 ```
-> Refresh token is set as `Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict`
+> Refresh token is set as `Set-Cookie: nexaai_refresh_token=...; HttpOnly; SameSite=Lax; Path=/`
 
-**Errors:** `401 INVALID_CREDENTIALS`
-
----
-
-### POST `/auth/refresh`
-
-Exchange refresh token for new access + refresh token pair.
-
-**Request:** No body — refresh token read from cookie
-
-**Response `200`:** Same as `/auth/login`
+**Errors:** `401 Unauthorized` (Invalid credentials), `403 Forbidden` (Account disabled)
 
 ---
 
-### POST `/auth/logout`
+### POST `/api/v1/auth/refresh`
 
-Invalidate refresh token.
+Exchange a valid refresh token cookie for a new access token and rotated refresh token.
+
+**Request:** No body — refresh token automatically read from `nexaai_refresh_token` cookie (or optional fallback `{ "refresh_token": "..." }`)
+
+**Response `200`:** Same as `/api/v1/auth/login` (with a newly rotated refresh token cookie)
+
+**Errors:** `401 Unauthorized` (Invalid, expired, or revoked refresh token)
+
+---
+
+### POST `/api/v1/auth/logout`
+
+Revoke the refresh token record in the database and clear the session cookie.
 
 **Response `204`:** No content
 
 ---
 
-### GET `/auth/me`
+### GET `/api/v1/auth/me`
 
-Get current authenticated user.
+Get profile and usage metrics for the authenticated user.
+Header: `Authorization: Bearer <access_token>`
 
 **Response `200`:**
 ```json

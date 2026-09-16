@@ -1,10 +1,12 @@
 """SQLAlchemy ORM models export."""
 
 import uuid
+from sqlalchemy import String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import String, Text
-from sqlalchemy.dialects.postgresql import UUID
+
 from app.db.base import Base, TimestampMixin
+from app.db.models.auth import RefreshToken
+from app.db.models.user import User
 
 
 class SystemMetadata(Base, TimestampMixin):
@@ -13,8 +15,8 @@ class SystemMetadata(Base, TimestampMixin):
     __tablename__ = "system_metadata"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        primary_column=True,
+        Uuid(as_uuid=True),
+        primary_key=True,
         default=uuid.uuid4,
         nullable=False,
     )
@@ -23,4 +25,4 @@ class SystemMetadata(Base, TimestampMixin):
     description: Mapped[str] = mapped_column(String(255), nullable=True)
 
 
-__all__ = ["Base", "SystemMetadata"]
+__all__ = ["Base", "User", "RefreshToken", "SystemMetadata"]

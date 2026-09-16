@@ -1,6 +1,6 @@
 """Application settings and configuration management via Pydantic."""
 
-from typing import List, Union
+from typing import List, Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -26,9 +26,15 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
     API_V1_PREFIX: str = "/api/v1"
 
-    # Security (Placeholder for Phase 5 JWT Auth)
+    # Security & Authentication (Phase 5)
     SECRET_KEY: str = "dev_secret_key_change_in_production_min_32_chars_long"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    REFRESH_COOKIE_NAME: str = "nexaai_refresh_token"
+    COOKIE_SECURE: bool = False
+    COOKIE_SAMESITE: str = "lax"
+    COOKIE_DOMAIN: Optional[str] = None
 
     # CORS
     CORS_ORIGINS: List[str] = [
@@ -47,8 +53,8 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = Field(
-        default="postgresql+asyncpg://nexaai_user:changeme_in_env@localhost:5432/nexaai",
-        description="Async PostgreSQL connection string using asyncpg driver",
+        default="sqlite+aiosqlite:///./nexaai.db",
+        description="Async database connection string. Defaults to local SQLite for seamless zero-config development, or postgresql+asyncpg:// for production.",
     )
     DB_POOL_SIZE: int = 5
     DB_MAX_OVERFLOW: int = 10

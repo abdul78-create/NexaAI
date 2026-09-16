@@ -10,14 +10,16 @@ import {
   FileText,
   BookOpen,
   BarChart3,
-  Settings,
   Sparkles,
   Plus,
   PanelLeftClose,
   PanelLeftOpen,
   X,
+  LogIn,
+  LogOut,
 } from 'lucide-react'
 import { useChat } from '@/hooks/useChat'
+import { useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ConversationList } from '@/components/chat/ConversationList'
@@ -56,6 +58,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
     isSidebarCollapsed,
     toggleSidebar,
   } = useChat()
+  const { user, isAuthenticated, logout } = useAuthStore()
 
   const handleSelectConversation = (id: string) => {
     selectConversation(id)
@@ -264,26 +267,63 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
           </Tooltip>
         ) : (
           <div className="flex items-center justify-between gap-2 rounded-lg p-1">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="size-7 rounded-full bg-brand/30 border border-brand/40 flex items-center justify-center text-xs font-bold text-brand flex-shrink-0">
-                A
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-foreground truncate">Abdul</p>
-                <p className="text-[10px] text-muted-foreground truncate">Free Tier</p>
-              </div>
-            </div>
+            {isAuthenticated && user ? (
+              <>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="size-7 rounded-full bg-brand/30 border border-brand/40 flex items-center justify-center text-xs font-bold text-brand flex-shrink-0 uppercase">
+                    {user.displayName.charAt(0) || 'U'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-foreground truncate">{user.displayName}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+                  </div>
+                </div>
 
-            <Link href="/app/settings">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/5"
-                aria-label="Account settings"
-              >
-                <Settings className="size-3.5" />
-              </Button>
-            </Link>
+                <div className="flex items-center gap-1">
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => logout()}
+                          className="size-7 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          aria-label="Sign out"
+                        >
+                          <LogOut className="size-3.5" />
+                        </Button>
+                      }
+                    />
+                    <TooltipContent side="top" className="text-xs">
+                      Sign out
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="size-7 rounded-full bg-muted/60 border border-border flex items-center justify-center text-xs font-bold text-muted-foreground flex-shrink-0">
+                    G
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-foreground truncate">Guest Mode</p>
+                    <p className="text-[10px] text-muted-foreground truncate">Demo Workspace</p>
+                  </div>
+                </div>
+
+                <Link href="/login">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 rounded-md gap-1"
+                  >
+                    <LogIn className="size-3" />
+                    <span>Sign In</span>
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -331,6 +371,10 @@ function MobileDrawer() {
    APP SHELL
    ============================================================ */
 export function AppShell({ children }: { children: React.ReactNode }) {
+  React.useEffect(() => {
+    useAuthStore.getState().checkAuth()
+  }, [])
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
       {/* Desktop sidebar */}

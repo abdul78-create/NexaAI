@@ -43,6 +43,9 @@ apps/api/alembic/versions/*.pyc
 uploads/
 temp/
 *.tmp
+*.db
+*.sqlite
+*.sqlite3
 
 # OS
 .DS_Store
