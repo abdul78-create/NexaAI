@@ -111,5 +111,11 @@ class Settings(BaseSettings):
     ENABLE_IMAGE_FEATURES: bool = True
     ENABLE_VOICE_FEATURES: bool = False  # enabled in Phase 13
 
+    # ── Phase 11: Image Intelligence ────────────────────────────────────────
+    MAX_IMAGE_WIDTH: int = 4096
+    MAX_IMAGE_HEIGHT: int = 4096
+    OCR_PROVIDER: str = "mock"
+    VISION_PROVIDER: str = "openai"
+
 
 settings = Settings()

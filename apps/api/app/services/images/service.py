@@ -1,0 +1,332 @@
+"""Image Intelligence Orchestrator Service."""
+
+import json
+import uuid
+from typing import List, Optional, Tuple, Dict, Any
+from fastapi import HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import settings
+from app.db.models.attachment import Attachment
+from app.db.models.image_analysis import ImageAnalysis
+from app.services.attachments.service import AttachmentService
+from app.services.storage.base import BaseStorageProvider
+from app.services.images.base import (
+    QualityMetrics,
+    OCRResult,
+    VisionAnalysisResult,
+    ImageProcessingError,
+)
+from app.services.images.quality import calculate_image_quality
+from app.services.images.preprocessing import (
+    resize_image,
+    rotate_image,
+    crop_image,
+    compress_image,
+    convert_format,
+    enhance_document_image,
+)
+from app.services.images.ocr import BaseOCRProvider, MockOCRProvider
+from app.services.images.providers.vision import BaseVisionProvider, OpenAIVisionProvider
+from app.services.images.providers.mock import MockVisionProvider
+
+
+def get_ocr_provider() -> BaseOCRProvider:
+    """Factory resolver for configured OCR provider."""
+    return MockOCRProvider()
+
+
+def get_vision_provider() -> BaseVisionProvider:
+    """Factory resolver for configured Vision AI provider."""
+    if settings.VISION_PROVIDER == "openai" and settings.OPENAI_API_KEY:
+        return OpenAIVisionProvider()
+    return MockVisionProvider()
+
+
+class ImageService:
+    """
+    Main Service managing image processing, OCR, Vision AI, and history persistence.
+    Operates on existing Phase 10 Attachment records.
+    """
+
+    def __init__(
+        self,
+        db: AsyncSession,
+        storage: BaseStorageProvider,
+        ocr_provider: Optional[BaseOCRProvider] = None,
+        vision_provider: Optional[BaseVisionProvider] = None,
+    ):
+        self.db = db
+        self.storage = storage
+        self.ocr_provider = ocr_provider or get_ocr_provider()
+        self.vision_provider = vision_provider or get_vision_provider()
+
+    async def _get_and_validate_attachment(
+        self,
+        attachment_id: uuid.UUID,
+        user_id: uuid.UUID,
+    ) -> Tuple[Attachment, bytes]:
+        """Verify attachment existence, user ownership, and image media type."""
+        try:
+            attachment = await AttachmentService.get_by_id(
+                db=self.db,
+                attachment_id=attachment_id,
+                user_id=user_id,
+            )
+        except HTTPException as exc:
+            raise ImageProcessingError(exc.detail) from exc
+
+        if attachment.media_type != "image":
+            raise ImageProcessingError(
+                f"Attachment {attachment_id} media_type is '{attachment.media_type}', expected 'image'."
+            )
+        if attachment.status != "ready":
+            raise ImageProcessingError(f"Attachment {attachment_id} status is '{attachment.status}', expected 'ready'.")
+
+        image_bytes = await self.storage.read(attachment.storage_key)
+        return attachment, image_bytes
+
+    async def analyze_image(
+        self,
+        attachment_id: uuid.UUID,
+        user_id: uuid.UUID,
+        prompt: Optional[str] = None,
+        model: Optional[str] = None,
+    ) -> Tuple[ImageAnalysis, VisionAnalysisResult, QualityMetrics]:
+        """Perform Vision AI description or question answering and persist record."""
+        attachment, image_bytes = await self._get_and_validate_attachment(attachment_id, user_id)
+
+        quality = calculate_image_quality(image_bytes)
+        if prompt:
+            vision_res = await self.vision_provider.answer_image_question(image_bytes, prompt, model)
+        else:
+            vision_res = await self.vision_provider.describe_image(image_bytes, model)
+
+        result_dict = {
+            "description": vision_res.description,
+            "answer": vision_res.answer,
+            "tags": vision_res.tags,
+            "objects_detected": vision_res.objects_detected,
+            "suggested_actions": vision_res.suggested_actions,
+        }
+
+        metadata_dict = {
+            "width": quality.width,
+            "height": quality.height,
+            "aspect_ratio": quality.aspect_ratio,
+            "blur_score": quality.blur_score,
+            "is_blurry": quality.is_blurry,
+            "brightness": quality.brightness,
+            "contrast": quality.contrast,
+        }
+
+        record = ImageAnalysis(
+            user_id=user_id,
+            attachment_id=attachment_id,
+            analysis_type="vision",
+            prompt=prompt,
+            result_json=json.dumps(result_dict),
+            extracted_text=None,
+            image_metadata_json=json.dumps(metadata_dict),
+            status="completed",
+        )
+        self.db.add(record)
+        await self.db.commit()
+        await self.db.refresh(record)
+
+        return record, vision_res, quality
+
+    async def extract_ocr(
+        self,
+        attachment_id: uuid.UUID,
+        user_id: uuid.UUID,
+        language: Optional[str] = None,
+    ) -> Tuple[ImageAnalysis, OCRResult]:
+        """Extract text via OCR provider and persist record."""
+        attachment, image_bytes = await self._get_and_validate_attachment(attachment_id, user_id)
+
+        ocr_res = await self.ocr_provider.extract_text(image_bytes, language=language)
+        quality = calculate_image_quality(image_bytes)
+
+        result_dict = {
+            "extracted_text": ocr_res.extracted_text,
+            "confidence": ocr_res.confidence,
+            "language": ocr_res.language,
+            "word_count": ocr_res.word_count,
+            "blocks": [
+                {
+                    "text": b.text,
+                    "confidence": b.confidence,
+                    "x_min": b.x_min,
+                    "y_min": b.y_min,
+                    "x_max": b.x_max,
+                    "y_max": b.y_max,
+                }
+                for b in ocr_res.blocks
+            ],
+        }
+
+        metadata_dict = {
+            "width": quality.width,
+            "height": quality.height,
+            "blur_score": quality.blur_score,
+        }
+
+        record = ImageAnalysis(
+            user_id=user_id,
+            attachment_id=attachment_id,
+            analysis_type="ocr",
+            prompt=None,
+            result_json=json.dumps(result_dict),
+            extracted_text=ocr_res.extracted_text,
+            image_metadata_json=json.dumps(metadata_dict),
+            status="completed",
+        )
+        self.db.add(record)
+        await self.db.commit()
+        await self.db.refresh(record)
+
+        return record, ocr_res
+
+    async def process_image(
+        self,
+        attachment_id: uuid.UUID,
+        user_id: uuid.UUID,
+        action: str,  # "resize" | "rotate" | "crop" | "compress" | "convert" | "enhance"
+        params: Dict[str, Any],
+    ) -> Tuple[ImageAnalysis, Attachment, Dict[str, Any]]:
+        """
+        Execute safe image transformation, save output as a NEW Attachment,
+        and log processing history record.
+        """
+        attachment, image_bytes = await self._get_and_validate_attachment(attachment_id, user_id)
+
+        if action == "resize":
+            output_bytes, meta = resize_image(
+                image_bytes,
+                target_width=params.get("width"),
+                target_height=params.get("height"),
+                preserve_aspect_ratio=params.get("preserve_aspect", True),
+            )
+        elif action == "rotate":
+            output_bytes, meta = rotate_image(image_bytes, angle=params.get("angle", 90))
+        elif action == "crop":
+            output_bytes, meta = crop_image(
+                image_bytes,
+                left=params["left"],
+                top=params["top"],
+                right=params["right"],
+                bottom=params["bottom"],
+            )
+        elif action == "compress":
+            output_bytes, meta = compress_image(
+                image_bytes,
+                quality=params.get("quality", 85),
+                target_format=params.get("format"),
+            )
+        elif action == "convert":
+            target_mime = params.get("target_mime_type", "image/jpeg")
+            output_bytes, meta = convert_format(image_bytes, target_mime_type=target_mime)
+        elif action == "enhance":
+            output_bytes, meta = enhance_document_image(image_bytes)
+        else:
+            raise ImageProcessingError(f"Unsupported image processing action: '{action}'")
+
+        # Save processed output image as a NEW Attachment using AttachmentService
+        orig_name_base = attachment.original_filename.rsplit(".", 1)[0]
+        ext = meta.mime_type.split("/")[-1]
+        if ext == "jpeg":
+            ext = "jpg"
+        new_filename = f"{orig_name_base}_{action}.{ext}"
+
+        new_attachment = await AttachmentService.upload(
+            db=self.db,
+            user_id=user_id,
+            filename=new_filename,
+            content_type=meta.mime_type,
+            data=output_bytes,
+        )
+
+        quality = calculate_image_quality(output_bytes)
+        result_dict = {
+            "action": action,
+            "new_attachment_id": str(new_attachment.id),
+            "output_size_bytes": meta.size_bytes,
+            "width": meta.width,
+            "height": meta.height,
+            "format": meta.format,
+        }
+        metadata_dict = {
+            "width": quality.width,
+            "height": quality.height,
+            "blur_score": quality.blur_score,
+            "brightness": quality.brightness,
+            "contrast": quality.contrast,
+        }
+
+        record = ImageAnalysis(
+            user_id=user_id,
+            attachment_id=attachment_id,
+            analysis_type="process",
+            prompt=action,
+            result_json=json.dumps(result_dict),
+            extracted_text=None,
+            image_metadata_json=json.dumps(metadata_dict),
+            status="completed",
+        )
+        self.db.add(record)
+        await self.db.commit()
+        await self.db.refresh(record)
+
+        return record, new_attachment, result_dict
+
+    async def get_history_for_user(
+        self,
+        user_id: uuid.UUID,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Tuple[List[ImageAnalysis], int]:
+        """Query user's image analysis history with pagination."""
+        stmt = (
+            select(ImageAnalysis)
+            .where(ImageAnalysis.user_id == user_id)
+            .order_by(ImageAnalysis.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+        )
+        res = await self.db.execute(stmt)
+        items = list(res.scalars().all())
+
+        count_stmt = select(ImageAnalysis).where(ImageAnalysis.user_id == user_id)
+        count_res = await self.db.execute(count_stmt)
+        total = len(count_res.scalars().all())
+
+        return items, total
+
+    async def get_analysis_by_id(
+        self,
+        analysis_id: uuid.UUID,
+        user_id: uuid.UUID,
+    ) -> ImageAnalysis:
+        """Get single analysis record ensuring user ownership."""
+        stmt = select(ImageAnalysis).where(
+            ImageAnalysis.id == analysis_id,
+            ImageAnalysis.user_id == user_id,
+        )
+        res = await self.db.execute(stmt)
+        record = res.scalar_one_or_none()
+        if not record:
+            raise ImageProcessingError(f"Image analysis record {analysis_id} not found.")
+        return record
+
+    async def delete_analysis(
+        self,
+        analysis_id: uuid.UUID,
+        user_id: uuid.UUID,
+    ) -> bool:
+        """Delete an image analysis history record."""
+        record = await self.get_analysis_by_id(analysis_id, user_id)
+        await self.db.delete(record)
+        await self.db.commit()
+        return True

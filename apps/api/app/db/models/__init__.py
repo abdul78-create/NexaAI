@@ -11,6 +11,7 @@ from app.db.models.chat import Conversation, ChatMessage
 from app.db.models.nlp import NLPAnalysis
 from app.db.models.document import Document, DocumentChunk
 from app.db.models.attachment import Attachment
+from app.db.models.image_analysis import ImageAnalysis
 
 
 class SystemMetadata(Base, TimestampMixin):
@@ -40,4 +41,5 @@ __all__ = [
     "Document",
     "DocumentChunk",
     "Attachment",
+    "ImageAnalysis",
 ]
