@@ -16,6 +16,10 @@ _MAGIC_SIGNATURES: dict[str, list[tuple[int, bytes]]] = {
     "image/gif":  [(0, b"GIF87a"), (0, b"GIF89a")],
     "image/webp": [(0, b"RIFF"), (8, b"WEBP")],
     "application/pdf": [(0, b"%PDF")],
+    "audio/wav":  [(0, b"RIFF"), (8, b"WAVE")],
+    "audio/mpeg": [(0, b"\xff\xfb"), (0, b"\xff\xf3"), (0, b"\xff\xf2"), (0, b"ID3")],
+    "audio/webm": [(0, b"\x1a\x45\xdf\xa3")],
+    "audio/ogg":  [(0, b"OggS")],
 }
 
 # MIME → coarse media_type category
@@ -33,6 +37,7 @@ _MIME_TO_MEDIA_TYPE: dict[str, str] = {
     "audio/wav":   "audio",
     "audio/mp4":   "audio",
     "audio/x-m4a": "audio",
+    "audio/ogg":   "audio",
 }
 
 # Extension → expected MIME type(s)
@@ -50,6 +55,7 @@ _EXT_TO_MIMES: dict[str, list[str]] = {
     "mp3":  ["audio/mpeg"],
     "wav":  ["audio/wav"],
     "m4a":  ["audio/x-m4a", "audio/mp4"],
+    "ogg":  ["audio/ogg"],
 }
 
 

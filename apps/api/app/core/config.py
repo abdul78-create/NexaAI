@@ -105,11 +105,12 @@ class Settings(BaseSettings):
         "audio/wav",
         "audio/mp4",
         "audio/x-m4a",
+        "audio/ogg",
     ]
 
     # Feature flags
     ENABLE_IMAGE_FEATURES: bool = True
-    ENABLE_VOICE_FEATURES: bool = False  # enabled in Phase 13
+    ENABLE_VOICE_FEATURES: bool = True
 
     # ── Phase 11 & 12: Image Intelligence & Production Providers ────────────
     MAX_IMAGE_WIDTH: int = 4096
@@ -123,6 +124,15 @@ class Settings(BaseSettings):
     VISION_MAX_PROMPT_LENGTH: int = 2000
     VISION_MAX_OUTPUT_TOKENS: int = 1000
     VISION_MAX_REQUESTS_PER_MINUTE: int = 60
+
+    # ── Phase 13: Speech Intelligence & Speech-to-Text ─────────────────────
+    AUDIO_MAX_FILE_SIZE_MB: int = 25
+    AUDIO_MAX_DURATION_SECONDS: int = 300  # 5 minutes
+    AUDIO_MAX_PROMPT_LENGTH: int = 1000
+    STT_PROVIDER: str = "openai"  # "openai" | "mock"
+    STT_MODEL: str = "whisper-1"
+    STT_TIMEOUT_SECONDS: float = 30.0
+    STT_MAX_REQUESTS_PER_MINUTE: int = 60
 
 
 settings = Settings()

@@ -12,6 +12,7 @@ import {
   BarChart3,
   Sparkles,
   Image as ImageIcon,
+  Mic,
   Plus,
   PanelLeftClose,
   PanelLeftOpen,
@@ -32,11 +33,13 @@ import { slideInLeft } from '@/lib/animations'
    ============================================================ */
 const secondaryNav = [
   { href: '/app/images', icon: ImageIcon, label: 'Image Studio', badge: 'Vision' },
+  { href: '/app/speech', icon: Mic, label: 'Speech Studio', badge: 'Speech' },
   { href: '/app/nlp', icon: FlaskConical, label: 'NLP Studio', badge: 'New' },
   { href: '/app/docs', icon: FileText, label: 'Documents', badge: 'RAG' },
   { href: '/app/prompts', icon: BookOpen, label: 'Prompt Library' },
   { href: '/app/usage', icon: BarChart3, label: 'Usage' },
 ]
+
 
 /* ============================================================
    SIDEBAR COMPONENT

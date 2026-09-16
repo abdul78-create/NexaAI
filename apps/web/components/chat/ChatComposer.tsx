@@ -29,6 +29,19 @@ export function ChatComposer({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Check for pending chat input staged from Speech Studio or other tools
+  useEffect(() => {
+    try {
+      const pending = sessionStorage.getItem('nexaai_pending_chat_input')
+      if (pending) {
+        setContent(pending)
+        sessionStorage.removeItem('nexaai_pending_chat_input')
+      }
+    } catch (e) {
+      // Ignore SSR / sessionStorage errors
+    }
+  }, [])
+
   // Auto-resize textarea up to 200px max height
   useEffect(() => {
     const el = textareaRef.current
@@ -36,6 +49,7 @@ export function ChatComposer({
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`
   }, [content])
+
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
