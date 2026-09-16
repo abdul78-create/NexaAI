@@ -2,6 +2,9 @@ import type { NextConfig } from 'next'
 import path from 'path'
 
 const nextConfig: NextConfig = {
+  // Production output for Docker containerization
+  output: 'standalone',
+
   // Transpile packages from the monorepo workspace
   transpilePackages: ['@nexaai/shared'],
 

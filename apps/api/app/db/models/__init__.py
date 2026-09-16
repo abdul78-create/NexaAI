@@ -7,6 +7,10 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, TimestampMixin
 from app.db.models.auth import RefreshToken
 from app.db.models.user import User
+from app.db.models.chat import Conversation, ChatMessage
+from app.db.models.nlp import NLPAnalysis
+from app.db.models.document import Document, DocumentChunk
+from app.db.models.attachment import Attachment
 
 
 class SystemMetadata(Base, TimestampMixin):
@@ -25,4 +29,15 @@ class SystemMetadata(Base, TimestampMixin):
     description: Mapped[str] = mapped_column(String(255), nullable=True)
 
 
-__all__ = ["Base", "User", "RefreshToken", "SystemMetadata"]
+__all__ = [
+    "Base",
+    "User",
+    "RefreshToken",
+    "SystemMetadata",
+    "Conversation",
+    "ChatMessage",
+    "NLPAnalysis",
+    "Document",
+    "DocumentChunk",
+    "Attachment",
+]

@@ -10,6 +10,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
 from app.core.logging import logger, RequestLoggingMiddleware
+from app.core.security_middleware import (
+    SecurityHeadersMiddleware,
+    rate_limit_middleware,
+    validate_production_secrets,
+)
 from app.api.router import api_v1_router
 from app.api.v1.health import router as health_direct_router
 from app.db.session import check_db_connectivity, async_engine
@@ -19,12 +24,13 @@ from app.schemas.common import ErrorResponse, ErrorDetail
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager for startup and shutdown routines."""
-    # Startup
+    # 1. Startup & Secret Validation
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION} [{settings.APP_ENV}]")
     logger.info(f"API Prefix: {settings.API_V1_PREFIX}")
     logger.info(f"CORS Allowed Origins: {settings.CORS_ORIGINS}")
+    validate_production_secrets()
 
-    # Verify initial database accessibility
+    # 2. Verify initial database accessibility
     is_sqlite = "sqlite" in settings.DATABASE_URL
     if is_sqlite:
         from app.db.base import Base
@@ -44,7 +50,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     yield
 
-    # Shutdown
+    # 3. Shutdown
     logger.info("Shutting down application resources...")
     await async_engine.dispose()
     logger.info("Database engine connections disposed cleanly.")
@@ -60,10 +66,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# 1. Add Request Logging & ID Middleware
+# 1. Add Security Headers Middleware
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 2. Add Request Logging & ID Middleware
 app.add_middleware(RequestLoggingMiddleware)
 
-# 2. Add CORS Middleware
+# 3. Add Rate Limiting Middleware
+app.middleware("http")(rate_limit_middleware)
+
+# 4. Add CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -73,7 +85,7 @@ app.add_middleware(
 )
 
 
-# 3. Global Exception Handlers
+# 5. Global Exception Handlers
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     request_id = getattr(request.state, "request_id", None)
@@ -94,7 +106,6 @@ async def validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
     request_id = getattr(request.state, "request_id", None)
-    # Format field errors safely
     errors = []
     for err in exc.errors():
         loc = " -> ".join(str(item) for item in err.get("loc", []))
@@ -130,10 +141,10 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     )
 
 
-# 4. Include Direct /health endpoints (accessible both at root and /api/v1)
+# 6. Include Direct /health endpoints (accessible both at root and /api/v1)
 app.include_router(health_direct_router)
 
-# 5. Include Versioned API Routes (/api/v1/...)
+# 7. Include Versioned API Routes (/api/v1/...)
 app.include_router(api_v1_router, prefix=settings.API_V1_PREFIX)
 
 

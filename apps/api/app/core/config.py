@@ -63,8 +63,53 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # AI Integration (Phase 6)
+    AI_PROVIDER: str = "openai"
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    AI_REQUEST_TIMEOUT: float = 30.0
+    ENABLE_MOCK_AI_FALLBACK: bool = True
+
     # Logging
     LOG_LEVEL: str = "INFO"
+
+    # ── Phase 10: Multimodal File Upload & Storage ──────────────────────────
+
+    # Storage provider: "local" only for now; extend to "s3" in Phase 18
+    STORAGE_PROVIDER: str = "local"
+    UPLOAD_DIR: str = "uploads"
+
+    # Global size limits (MB)
+    MAX_UPLOAD_SIZE_MB: int = 25
+    MAX_IMAGE_SIZE_MB: int = 10
+    MAX_DOCUMENT_SIZE_MB: int = 25
+    MAX_AUDIO_DURATION_SECONDS: int = 600  # placeholder for Phase 13
+
+    # MIME allowlists (comma-separated string or list in env)
+    ALLOWED_IMAGE_MIMETYPES: List[str] = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+    ]
+    ALLOWED_DOCUMENT_MIMETYPES: List[str] = [
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/plain",
+        "text/markdown",
+    ]
+    ALLOWED_AUDIO_MIMETYPES: List[str] = [
+        "audio/webm",
+        "audio/mpeg",
+        "audio/wav",
+        "audio/mp4",
+        "audio/x-m4a",
+    ]
+
+    # Feature flags
+    ENABLE_IMAGE_FEATURES: bool = True
+    ENABLE_VOICE_FEATURES: bool = False  # enabled in Phase 13
 
 
 settings = Settings()

@@ -56,6 +56,30 @@ class User(Base, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    conversations: Mapped[List["Conversation"]] = relationship(  # type: ignore # noqa: F821
+        "Conversation",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    nlp_analyses: Mapped[List["NLPAnalysis"]] = relationship(  # type: ignore # noqa: F821
+        "NLPAnalysis",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    documents: Mapped[List["Document"]] = relationship(  # type: ignore # noqa: F821
+        "Document",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    attachments: Mapped[List["Attachment"]] = relationship(  # type: ignore # noqa: F821
+        "Attachment",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="select",
+    )
 
     def __repr__(self) -> str:
         return f"<User {self.email} ({self.id})>"

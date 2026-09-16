@@ -1,6 +1,14 @@
 import { create } from 'zustand'
 import { Conversation, Message } from '@/types/chat'
 import { INITIAL_CONVERSATIONS, AI_MODELS, generateMockAiResponse } from '@/lib/mock-data'
+import { useAuthStore } from '@/stores/auth-store'
+import {
+  deleteConversationApi,
+  fetchConversationDetail,
+  fetchUserConversations,
+  streamChatCompletion,
+  updateConversationApi,
+} from '@/lib/chat-api'
 
 interface ChatState {
   conversations: Conversation[]
@@ -10,12 +18,15 @@ interface ChatState {
   isStreaming: boolean
   isSidebarCollapsed: boolean
   isMobileSidebarOpen: boolean
+  isLoadingConversations: boolean
+  error: string | null
 
   // Actions
+  fetchConversations: () => Promise<void>
   createNewChat: () => void
-  selectConversation: (id: string) => void
-  deleteConversation: (id: string) => void
-  renameConversation: (id: string, newTitle: string) => void
+  selectConversation: (id: string) => Promise<void>
+  deleteConversation: (id: string) => Promise<void>
+  renameConversation: (id: string, newTitle: string) => Promise<void>
   setSearchQuery: (q: string) => void
   setSelectedModel: (modelId: string) => void
   toggleSidebar: () => void
@@ -27,7 +38,7 @@ interface ChatState {
   clearActiveConversation: () => void
 }
 
-let activeStreamAbort: (() => void) | null = null
+let activeAbortController: AbortController | null = null
 
 export const useChatStore = create<ChatState>((set, get) => ({
   conversations: INITIAL_CONVERSATIONS,
@@ -37,12 +48,43 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isStreaming: false,
   isSidebarCollapsed: false,
   isMobileSidebarOpen: false,
+  isLoadingConversations: false,
+  error: null,
+
+  fetchConversations: async () => {
+    const token = useAuthStore.getState().token
+    if (!token) {
+      // Guest mode: retain client mock conversations
+      return
+    }
+
+    set({ isLoadingConversations: true, error: null })
+    try {
+      const backendConvs = await fetchUserConversations(token)
+      if (backendConvs.length > 0) {
+        set({
+          conversations: backendConvs,
+          activeConversationId: backendConvs[0].id,
+          isLoadingConversations: false,
+        })
+        // Fetch full message history for active conversation
+        const detail = await fetchConversationDetail(token, backendConvs[0].id)
+        set((state) => ({
+          conversations: state.conversations.map((c) => (c.id === detail.id ? detail : c)),
+        }))
+      } else {
+        set({ conversations: [], activeConversationId: null, isLoadingConversations: false })
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to load conversations from backend.'
+      set({ isLoadingConversations: false, error: message })
+    }
+  },
 
   createNewChat: () => {
-    // If currently streaming, stop it
-    if (activeStreamAbort) {
-      activeStreamAbort()
-      activeStreamAbort = null
+    if (activeAbortController) {
+      activeAbortController.abort()
+      activeAbortController = null
     }
     set({
       activeConversationId: null,
@@ -51,19 +93,41 @@ export const useChatStore = create<ChatState>((set, get) => ({
     })
   },
 
-  selectConversation: (id: string) => {
-    if (activeStreamAbort) {
-      activeStreamAbort()
-      activeStreamAbort = null
+  selectConversation: async (id: string) => {
+    if (activeAbortController) {
+      activeAbortController.abort()
+      activeAbortController = null
     }
+
     set({
       activeConversationId: id,
       isStreaming: false,
       isMobileSidebarOpen: false,
     })
+
+    const token = useAuthStore.getState().token
+    if (token) {
+      try {
+        const detail = await fetchConversationDetail(token, id)
+        set((state) => ({
+          conversations: state.conversations.map((c) => (c.id === detail.id ? detail : c)),
+        }))
+      } catch {
+        // Fallback silently if offline or cached
+      }
+    }
   },
 
-  deleteConversation: (id: string) => {
+  deleteConversation: async (id: string) => {
+    const token = useAuthStore.getState().token
+    if (token) {
+      try {
+        await deleteConversationApi(token, id)
+      } catch {
+        // Continue clearing local state
+      }
+    }
+
     const { conversations, activeConversationId } = get()
     const updated = conversations.filter((c) => c.id !== id)
     let nextActive = activeConversationId
@@ -76,35 +140,31 @@ export const useChatStore = create<ChatState>((set, get) => ({
     })
   },
 
-  renameConversation: (id: string, newTitle: string) => {
+  renameConversation: async (id: string, newTitle: string) => {
     const trimmed = newTitle.trim()
     if (!trimmed) return
+
     set((state) => ({
       conversations: state.conversations.map((c) =>
         c.id === id ? { ...c, title: trimmed, updatedAt: new Date().toISOString() } : c
       ),
     }))
+
+    const token = useAuthStore.getState().token
+    if (token) {
+      try {
+        await updateConversationApi(token, id, { title: trimmed })
+      } catch {
+        // Fallback
+      }
+    }
   },
 
-  setSearchQuery: (q: string) => {
-    set({ searchQuery: q })
-  },
-
-  setSelectedModel: (modelId: string) => {
-    set({ selectedModelId: modelId })
-  },
-
-  toggleSidebar: () => {
-    set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed }))
-  },
-
-  setSidebarCollapsed: (collapsed: boolean) => {
-    set({ isSidebarCollapsed: collapsed })
-  },
-
-  setMobileSidebarOpen: (open: boolean) => {
-    set({ isMobileSidebarOpen: open })
-  },
+  setSearchQuery: (q: string) => set({ searchQuery: q }),
+  setSelectedModel: (modelId: string) => set({ selectedModelId: modelId }),
+  toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
+  setSidebarCollapsed: (collapsed: boolean) => set({ isSidebarCollapsed: collapsed }),
+  setMobileSidebarOpen: (open: boolean) => set({ isMobileSidebarOpen: open }),
 
   sendMessage: async (content: string) => {
     const trimmed = content.trim()
@@ -126,7 +186,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     let currentConvId = activeConversationId
     let updatedConversations = [...conversations]
 
-    // If starting from empty state, create new conversation
+    // If starting from empty state, initialize new conversation
     if (!currentConvId) {
       const newTitle = trimmed.length > 35 ? trimmed.slice(0, 35) + '...' : trimmed
       currentConvId = `conv-${Date.now()}`
@@ -145,7 +205,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
         activeConversationId: currentConvId,
       })
     } else {
-      // Append user message to active conversation
       updatedConversations = updatedConversations.map((c) => {
         if (c.id === currentConvId) {
           return {
@@ -182,19 +241,155 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }),
     }))
 
-    // Simulate response generation with token streaming
+    const token = useAuthStore.getState().token
+
+    // AUTHENTICATED REAL SSE STREAMING
+    if (token) {
+      activeAbortController = new AbortController()
+      let accumulatedText = ''
+      let realBackendConvId = currentConvId.startsWith('conv-') ? undefined : currentConvId
+
+      try {
+        await streamChatCompletion(
+          token,
+          {
+            conversation_id: realBackendConvId,
+            content: trimmed,
+            model: selectedModelId,
+          },
+          (event, data) => {
+            if (event === 'message_start') {
+              if (data.conversation_id) {
+                const newBackendId = data.conversation_id
+                set((state) => ({
+                  activeConversationId: newBackendId,
+                  conversations: state.conversations.map((c) =>
+                    c.id === currentConvId ? { ...c, id: newBackendId } : c
+                  ),
+                }))
+                currentConvId = newBackendId
+              }
+            } else if (event === 'token') {
+              accumulatedText += data.text || ''
+              set((state) => ({
+                conversations: state.conversations.map((c) => {
+                  if (c.id === currentConvId) {
+                    return {
+                      ...c,
+                      messages: c.messages.map((m) =>
+                        m.id === assistantMsgId ? { ...m, content: accumulatedText } : m
+                      ),
+                    }
+                  }
+                  return c
+                }),
+              }))
+            } else if (event === 'usage') {
+              set((state) => ({
+                conversations: state.conversations.map((c) => {
+                  if (c.id === currentConvId) {
+                    return {
+                      ...c,
+                      messages: c.messages.map((m) =>
+                        m.id === assistantMsgId
+                          ? { ...m, tokens: (data.output_tokens || 0) + (data.input_tokens || 0) }
+                          : m
+                      ),
+                    }
+                  }
+                  return c
+                }),
+              }))
+            } else if (event === 'message_end') {
+              set((state) => ({
+                isStreaming: false,
+                conversations: state.conversations.map((c) => {
+                  if (c.id === currentConvId) {
+                    return {
+                      ...c,
+                      messages: c.messages.map((m) =>
+                        m.id === assistantMsgId
+                          ? {
+                              ...m,
+                              content: accumulatedText,
+                              status: 'done',
+                              tokens: Math.round(accumulatedText.length / 4),
+                            }
+                          : m
+                      ),
+                    }
+                  }
+                  return c
+                }),
+              }))
+            } else if (event === 'error') {
+              set((state) => ({
+                isStreaming: false,
+                conversations: state.conversations.map((c) => {
+                  if (c.id === currentConvId) {
+                    return {
+                      ...c,
+                      messages: c.messages.map((m) =>
+                        m.id === assistantMsgId
+                          ? {
+                              ...m,
+                              content: accumulatedText || 'Error generating response.',
+                              status: 'error',
+                              error: data.message || 'Stream connection error.',
+                            }
+                          : m
+                      ),
+                    }
+                  }
+                  return c
+                }),
+              }))
+            }
+          },
+          activeAbortController.signal
+        )
+      } catch (err: unknown) {
+        const isAbort = err instanceof Error && err.name === 'AbortError'
+        set((state) => ({
+          isStreaming: false,
+          conversations: state.conversations.map((c) => {
+            if (c.id === currentConvId) {
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === assistantMsgId
+                    ? {
+                        ...m,
+                        content: accumulatedText,
+                        status: isAbort ? 'done' : 'error',
+                        error: isAbort ? undefined : (err instanceof Error ? err.message : 'Stream interrupted.'),
+                      }
+                    : m
+                ),
+              }
+            }
+            return c
+          }),
+        }))
+      } finally {
+        activeAbortController = null
+      }
+      return
+    }
+
+    // GUEST MODE FALLBACK (Zero-cost client mock stream)
     const fullResponse = generateMockAiResponse(trimmed, selectedModelId)
     const words = fullResponse.split(/(\s+)/)
     let currentContent = ''
     let isCancelled = false
 
-    activeStreamAbort = () => {
+    const abortController = new AbortController()
+    activeAbortController = abortController
+    abortController.signal.addEventListener('abort', () => {
       isCancelled = true
-    }
+    })
 
     const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-    // Initial slight "thinking" latency
     await delay(350)
 
     for (let i = 0; i < words.length; i++) {
@@ -215,13 +410,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
         }),
       }))
 
-      // Realistic typing cadence (15ms - 35ms)
       if (words[i].trim().length > 0) {
         await delay(Math.floor(Math.random() * 20) + 15)
       }
     }
 
-    // Finalize assistant message
     set((state) => ({
       isStreaming: false,
       conversations: state.conversations.map((c) => {
@@ -244,13 +437,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }),
     }))
 
-    activeStreamAbort = null
+    activeAbortController = null
   },
 
   stopGeneration: () => {
-    if (activeStreamAbort) {
-      activeStreamAbort()
-      activeStreamAbort = null
+    if (activeAbortController) {
+      activeAbortController.abort()
+      activeAbortController = null
     }
     set({ isStreaming: false })
   },
@@ -262,7 +455,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const conv = conversations.find((c) => c.id === activeConversationId)
     if (!conv || conv.messages.length === 0) return
 
-    // Find the last user message
     let lastUserPrompt = ''
     let lastUserIndex = -1
     for (let i = conv.messages.length - 1; i >= 0; i--) {
@@ -283,89 +475,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       ),
     }))
 
-    // Re-trigger response generation for the user message
-    const selectedModel = AI_MODELS.find((m) => m.id === get().selectedModelId) || AI_MODELS[0]
-    const assistantMsgId = `asst-regen-${Date.now()}`
-    const assistantMessage: Message = {
-      id: assistantMsgId,
-      role: 'assistant',
-      model: selectedModel.name,
-      createdAt: new Date().toISOString(),
-      content: '',
-      status: 'streaming',
-    }
-
-    set((state) => ({
-      isStreaming: true,
-      conversations: state.conversations.map((c) => {
-        if (c.id === activeConversationId) {
-          return {
-            ...c,
-            messages: [...c.messages, assistantMessage],
-          }
-        }
-        return c
-      }),
-    }))
-
-    const fullResponse = generateMockAiResponse(lastUserPrompt, get().selectedModelId)
-    const words = fullResponse.split(/(\s+)/)
-    let currentContent = ''
-    let isCancelled = false
-
-    activeStreamAbort = () => {
-      isCancelled = true
-    }
-
-    const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-    await delay(300)
-
-    for (let i = 0; i < words.length; i++) {
-      if (isCancelled) break
-      currentContent += words[i]
-
-      set((state) => ({
-        conversations: state.conversations.map((c) => {
-          if (c.id === activeConversationId) {
-            return {
-              ...c,
-              messages: c.messages.map((m) =>
-                m.id === assistantMsgId ? { ...m, content: currentContent } : m
-              ),
-            }
-          }
-          return c
-        }),
-      }))
-
-      if (words[i].trim().length > 0) {
-        await delay(Math.floor(Math.random() * 20) + 15)
-      }
-    }
-
-    set((state) => ({
-      isStreaming: false,
-      conversations: state.conversations.map((c) => {
-        if (c.id === activeConversationId) {
-          return {
-            ...c,
-            messages: c.messages.map((m) =>
-              m.id === assistantMsgId
-                ? {
-                    ...m,
-                    content: currentContent,
-                    status: 'done',
-                    tokens: Math.round(currentContent.length / 4),
-                  }
-                : m
-            ),
-          }
-        }
-        return c
-      }),
-    }))
-
-    activeStreamAbort = null
+    // Re-send user prompt
+    await get().sendMessage(lastUserPrompt)
   },
 
   clearActiveConversation: () => {

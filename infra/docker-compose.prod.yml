@@ -1,0 +1,83 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: nexaai_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_DB: nexaai
+      POSTGRES_USER: nexaai_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-prod_secure_pg_password_999}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexaai_user -d nexaai"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexaai_redis_prod
+    restart: always
+    volumes:
+      - redisdata_prod:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    container_name: nexaai_api_prod
+    restart: always
+    environment:
+      APP_NAME: "NexaAI API"
+      APP_ENV: "production"
+      DEBUG: "false"
+      DATABASE_URL: "postgresql+asyncpg://nexaai_user:${POSTGRES_PASSWORD:-prod_secure_pg_password_999}@postgres:5432/nexaai"
+      REDIS_URL: "redis://redis:6379/0"
+      SECRET_KEY: "${SECRET_KEY:-prod_secure_secret_key_minimum_32_characters_long_hash}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_BASE_URL: "${OPENAI_BASE_URL:-https://api.openai.com/v1}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/liveness"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    container_name: nexaai_web_prod
+    restart: always
+    environment:
+      NODE_ENV: "production"
+      NEXT_PUBLIC_API_URL: "http://localhost/api/v1"
+    depends_on:
+      - api
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: nexaai_nginx_prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+      - web
+
+volumes:
+  pgdata_prod:
+  redisdata_prod:
