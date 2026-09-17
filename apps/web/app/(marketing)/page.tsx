@@ -9,7 +9,8 @@ import { useGSAP } from '@gsap/react'
 import {
   ArrowRight, Sparkles, Zap, Brain, FileText, BarChart3,
   ChevronRight, Code2, MessageSquare, CheckCircle2,
-  Terminal, GitBranch, Layers,
+  Terminal, GitBranch, Layers, Mic, Image as ImageIcon,
+  ShieldCheck, Cpu, Activity, Lock, Database, Server,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { Button } from '@/components/ui/button'
@@ -37,9 +38,10 @@ function Navbar() {
 
   const navLinks = [
     { label: 'Features', href: '#features' },
+    { label: 'Architecture', href: '#architecture' },
     { label: 'How it works', href: '#workflow' },
-    { label: 'NLP Studio', href: '#nlp' },
-    { label: 'Pricing', href: '#pricing' },
+    { label: 'Pricing', href: '/pricing' },
+    { label: 'Docs', href: '/docs' },
   ]
 
   return (
@@ -232,7 +234,7 @@ function HeroSection() {
                   className="group cursor-default border-brand/20 bg-brand/8 px-4 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur-sm hover:border-brand/40 hover:text-foreground transition-all duration-200"
                 >
                   <span className="mr-2 size-1.5 rounded-full bg-brand inline-block animate-pulse" />
-                  NLP Studio & Document Intelligence — now live
+                  NexaAI Platform — Unified Multimodal Workspace
                   <ChevronRight className="ml-1 size-3 group-hover:translate-x-0.5 transition-transform" />
                 </Badge>
               </MagneticButton>
@@ -241,21 +243,21 @@ function HeroSection() {
             {/* Headline — word by word via GSAP */}
             <h1
               ref={headlineRef}
-              className="text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl leading-[1.08] perspective-1000"
+              className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl leading-[1.12] perspective-1000"
               style={{ perspective: '800px' }}
             >
-              {['AI', 'that', 'truly'].map((word) => (
+              {['Your', 'AI', 'Workspace', 'for'].map((word) => (
                 <span key={word} className="hero-word inline-block mr-[0.25em] last:mr-0">{word}</span>
               ))}
               <br />
-              <span className="hero-word inline-block gradient-text">understands</span>{' '}
-              <span className="hero-word inline-block text-foreground">you</span>
+              <span className="hero-word inline-block gradient-text">Chat,</span>{' '}
+              <span className="hero-word inline-block gradient-text">Documents,</span>{' '}
+              <span className="hero-word inline-block text-foreground">& Analysis</span>
             </h1>
 
             {/* Subtext */}
             <p className="hero-sub mt-6 text-lg text-muted-foreground leading-relaxed sm:text-xl max-w-xl mx-auto lg:mx-0">
-              Intelligent conversation, deep linguistic analysis, and document intelligence —
-              unified in one premium AI workspace built for people who demand more.
+              NexaAI brings AI conversations, document intelligence, speech transcription, image analysis, and productivity tools into one unified workspace.
             </p>
 
             {/* CTAs */}
@@ -267,7 +269,7 @@ function HeroSection() {
                     className="group relative gradient-brand border-0 text-white h-13 px-8 text-base font-semibold shadow-2xl hover:opacity-90 transition-all overflow-hidden"
                   >
                     <span className="relative z-10 flex items-center gap-2">
-                      Start for free
+                      Get started free
                       <motion.span
                         animate={{ x: [0, 3, 0] }}
                         transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
@@ -284,24 +286,22 @@ function HeroSection() {
                 <Button
                   variant="ghost"
                   size="lg"
-                  className="h-13 px-8 text-base border border-white/10 hover:border-brand/25 hover:bg-brand/5 transition-all duration-200"
+                  className="h-13 px-8 text-base border border-border/80 hover:border-brand/40 hover:bg-brand/5 transition-all duration-200"
                 >
-                  See how it works
+                  Explore features
                 </Button>
               </Link>
             </div>
 
-            {/* Social proof */}
+            {/* Verified Foundation info */}
             <div className="hero-proof mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-              <p className="text-xs text-muted-foreground/50">
-                No credit card required · Free tier available
+              <p className="text-xs text-muted-foreground/70">
+                Free tier with 5 daily High reasoning requests · No credit card required
               </p>
-              <div className="hidden sm:block h-3 w-px bg-white/10" />
-              <div className="flex items-center gap-1.5">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="size-5 rounded-full bg-gradient-to-br from-brand/60 to-cyan/40 border border-white/10" />
-                ))}
-                <span className="ml-2 text-xs text-muted-foreground/60">Trusted by 1,000+ users</span>
+              <div className="hidden sm:block h-3 w-px bg-border/60" />
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
+                <CheckCircle2 className="size-3.5 text-brand" />
+                <span>Independently built & verified</span>
               </div>
             </div>
           </div>
@@ -575,13 +575,13 @@ function ProductPreview() {
                   >
                     <div className="mb-4 text-xs font-medium text-muted-foreground border-b border-white/5 pb-3">NLP Studio — Text Analysis</div>
                     <div className="rounded-lg bg-white/3 border border-white/6 p-3 mb-4 text-xs text-muted-foreground leading-relaxed">
-                      &ldquo;The product launch exceeded all expectations. Customer adoption rates are remarkable and the team is thrilled with the results.&rdquo;
+                      &ldquo;Natural language processing enables systems to extract entities, evaluate sentiment polarity, and assess text readability across complex documents.&rdquo;
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       {[
                         { label: 'Sentiment', value: 'Positive', score: 0.92, color: 'bg-green-500' },
-                        { label: 'Intent', value: 'Reporting', score: 0.85, color: 'bg-blue-500' },
-                        { label: 'Emotion', value: 'Joy', score: 0.78, color: 'bg-amber-500' },
+                        { label: 'Intent', value: 'Informing', score: 0.85, color: 'bg-blue-500' },
+                        { label: 'Emotion', value: 'Neutral', score: 0.78, color: 'bg-amber-500' },
                         { label: 'Readability', value: 'Grade 9', score: 0.71, color: 'bg-purple-500' },
                       ].map((item) => (
                         <div key={item.label} className="rounded-lg bg-white/4 border border-white/6 p-3">
@@ -615,11 +615,11 @@ function ProductPreview() {
                   >
                     <div className="mb-4 text-xs font-medium text-muted-foreground border-b border-white/5 pb-3">Document Intelligence</div>
                     <div className="flex items-center gap-3 rounded-lg border border-white/8 bg-white/3 p-3 mb-4">
-                      <div className="size-8 rounded-md bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                        <FileText className="size-4 text-red-400" />
+                      <div className="size-8 rounded-md bg-brand/20 flex items-center justify-center flex-shrink-0">
+                        <FileText className="size-4 text-brand" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-medium truncate">Q4_Annual_Report.pdf</p>
+                        <p className="text-[10px] font-medium truncate">System_Architecture_Overview.pdf</p>
                         <p className="text-[9px] text-muted-foreground">48 chunks · 1,536-dim embeddings</p>
                       </div>
                       <div className="size-2 rounded-full bg-green-400 animate-pulse" />
@@ -629,7 +629,7 @@ function ProductPreview() {
                         <Sparkles className="size-3 text-white" />
                       </div>
                       <div className="rounded-xl rounded-tl-sm bg-white/5 p-3 text-[10px] leading-relaxed text-muted-foreground flex-1">
-                        Based on the document, <span className="text-foreground">Q4 revenue grew 34% YoY</span> to $2.8M, driven primarily by enterprise subscriptions. Key risks include...
+                        Based on section 3 of the uploaded document, <span className="text-foreground">the platform implements asynchronous connection pooling</span>, vector indexing with pgvector, and isolated tenant storage.
                       </div>
                     </div>
                     <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/3 px-3 py-2 mt-auto">
@@ -660,78 +660,145 @@ function ProductPreview() {
 }
 
 /* ============================================================
-   STATS SECTION
+   STATS SECTION — verified codebase specifications
    ============================================================ */
 function StatsSection() {
   const stats = [
-    { value: '< 200ms', label: 'Median response latency', icon: Zap },
-    { value: '99.9%', label: 'Uptime SLA', icon: CheckCircle2 },
-    { value: 'GPT-4o', label: 'Flagship model support', icon: Brain },
-    { value: '∞', label: 'Conversation history', icon: GitBranch },
+    { value: '3 Modes', label: 'Quick, Standard & High reasoning', icon: Brain },
+    { value: '5 Daily', label: 'Free High-mode quota per user', icon: Zap },
+    { value: '116 Tests', label: 'Backend test suite passing', icon: CheckCircle2 },
+    { value: 'PostgreSQL', label: 'Branching conversation persistence', icon: GitBranch },
   ]
 
   return (
     <section className="relative border-y border-white/6 bg-black/10 py-14">
-      <Stagger className="mx-auto grid max-w-5xl grid-cols-2 gap-8 px-6 md:grid-cols-4">
-        {stats.map((stat) => (
-          <StaggerItem key={stat.label} className="text-center group">
-            <div className="mb-2 flex justify-center">
-              <div className="size-9 rounded-xl bg-brand/10 border border-brand/15 flex items-center justify-center group-hover:bg-brand/20 transition-colors">
-                <stat.icon className="size-4 text-brand" />
+      <div className="mx-auto max-w-5xl px-6">
+        <div className="text-center mb-8">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground/60 font-semibold">
+            Verified Project Specifications
+          </p>
+        </div>
+        <Stagger className="grid grid-cols-2 gap-8 md:grid-cols-4">
+          {stats.map((stat) => (
+            <StaggerItem key={stat.label} className="text-center group">
+              <div className="mb-2 flex justify-center">
+                <div className="size-9 rounded-xl bg-brand/10 border border-brand/15 flex items-center justify-center group-hover:bg-brand/20 transition-colors">
+                  <stat.icon className="size-4 text-brand" />
+                </div>
               </div>
-            </div>
-            <div className="text-3xl font-bold gradient-text">{stat.value}</div>
-            <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>
-          </StaggerItem>
-        ))}
-      </Stagger>
+              <div className="text-2xl md:text-3xl font-bold gradient-text">{stat.value}</div>
+              <div className="mt-1 text-xs sm:text-sm text-muted-foreground">{stat.label}</div>
+            </StaggerItem>
+          ))}
+        </Stagger>
+      </div>
     </section>
   )
 }
 
 /* ============================================================
-   FEATURES SECTION — scroll-triggered
+   FEATURES SECTION — verified implemented capabilities
    ============================================================ */
 const features = [
   {
-    icon: Brain,
-    title: 'Intelligent AI Chat',
-    description: 'Stream conversations with frontier language models. Context-aware, markdown-rendered, with syntax-highlighted code blocks and rich formatting.',
-    tag: 'Core',
+    icon: MessageSquare,
+    title: 'AI Chat Workspace',
+    description: 'Conversational chat with markdown rendering, syntax-highlighted code blocks, copy actions, and tree-structured conversation branching.',
+    tag: 'Implemented',
     color: 'from-violet-500/15 to-violet-600/5',
     iconColor: 'text-violet-400',
     iconBg: 'bg-violet-500/10 border-violet-500/20',
-    points: ['Streaming SSE responses', 'Conversation persistence', 'Custom system prompts'],
+    points: ['Streaming SSE responses', 'Tree-structured branching', 'Persistent conversation history'],
   },
   {
-    icon: BarChart3,
-    title: 'NLP Studio',
-    description: 'Deep linguistic analysis — sentiment scoring, named entity recognition, intent detection, keyword extraction, readability grading, and AI summarization.',
-    tag: 'Analysis',
-    color: 'from-blue-500/15 to-blue-600/5',
-    iconColor: 'text-blue-400',
-    iconBg: 'bg-blue-500/10 border-blue-500/20',
-    points: ['VADER sentiment analysis', 'spaCy entity recognition', 'AI-powered intent detection'],
-  },
-  {
-    icon: FileText,
-    title: 'Document Intelligence',
-    description: 'Upload PDFs and documents. Extract content, generate semantic embeddings, and query your knowledge base with vector similarity search.',
-    tag: 'RAG',
-    color: 'from-cyan-500/15 to-cyan-600/5',
-    iconColor: 'text-cyan-400',
-    iconBg: 'bg-cyan-500/10 border-cyan-500/20',
-    points: ['PDF & DOCX support', 'pgvector semantic search', 'Source-cited answers'],
+    icon: Brain,
+    title: 'Multiple Chat Modes',
+    description: 'Dynamic model routing across Quick (gpt-4o-mini), Standard (gpt-4o-mini), and High (gpt-4o) with server-enforced daily limits.',
+    tag: 'Model Routing',
+    color: 'from-purple-500/15 to-purple-600/5',
+    iconColor: 'text-purple-400',
+    iconBg: 'bg-purple-500/10 border-purple-500/20',
+    points: ['Quick & Standard: gpt-4o-mini', 'High: gpt-4o deep reasoning', '5 daily High requests quota'],
   },
   {
     icon: Zap,
-    title: 'Real-time Streaming',
-    description: 'Token-by-token response streaming over Server-Sent Events. Instant output, never a blank loading screen, always responsive.',
-    tag: 'Performance',
+    title: 'Real-time SSE Streaming',
+    description: 'Token-by-token response streaming over Server-Sent Events. Instant feedback with abort-controller mid-stream stop and regeneration.',
+    tag: 'Implemented',
     color: 'from-amber-500/15 to-amber-600/5',
     iconColor: 'text-amber-400',
     iconBg: 'bg-amber-500/10 border-amber-500/20',
-    points: ['SSE streaming protocol', 'Stop generation mid-stream', 'Regenerate any response'],
+    points: ['FastAPI SSE streaming pipeline', 'Abort controller cancellation', 'Regenerate response handling'],
+  },
+  {
+    icon: Layers,
+    title: 'Curated Prompt Library',
+    description: 'Searchable library of structured prompt templates categorized by task. Insert prompts directly into the composer with one click.',
+    tag: 'Implemented',
+    color: 'from-blue-500/15 to-blue-600/5',
+    iconColor: 'text-blue-400',
+    iconBg: 'bg-blue-500/10 border-blue-500/20',
+    points: ['Task & role-based categories', 'Instant composer injection', 'Category & tag filtering'],
+  },
+  {
+    icon: Mic,
+    title: 'Speech Studio',
+    description: 'Record via browser microphone or upload audio files. Edit transcripts, copy, download, or insert them directly into your chat workspace.',
+    tag: 'Mock / Credential-ready',
+    color: 'from-rose-500/15 to-rose-600/5',
+    iconColor: 'text-rose-400',
+    iconBg: 'bg-rose-500/10 border-rose-500/20',
+    points: ['Local mock STT active', 'OpenAI Whisper architecture ready', '1-click transcript insertion'],
+  },
+  {
+    icon: FileText,
+    title: 'Document Intelligence & RAG',
+    description: 'Architecture for document ingestion, text chunking, and semantic vector similarity search using PostgreSQL and embeddings.',
+    tag: 'Architecture',
+    color: 'from-cyan-500/15 to-cyan-600/5',
+    iconColor: 'text-cyan-400',
+    iconBg: 'bg-cyan-500/10 border-cyan-500/20',
+    points: ['PDF & text document ingestion', 'Chunking & vector index pipeline', 'Knowledge-grounded QA design'],
+  },
+  {
+    icon: BarChart3,
+    title: 'NLP Analysis Studio',
+    description: 'In-depth text processing suite evaluating sentiment polarity, named entity recognition, intent classification, and readability scores.',
+    tag: 'Implemented',
+    color: 'from-emerald-500/15 to-emerald-600/5',
+    iconColor: 'text-emerald-400',
+    iconBg: 'bg-emerald-500/10 border-emerald-500/20',
+    points: ['Sentiment polarity scoring', 'Named entity extraction', 'Text readability index'],
+  },
+  {
+    icon: ImageIcon,
+    title: 'Image Intelligence',
+    description: 'OpenCV and Pillow processing pipeline with OCR text extraction and vision model abstraction architecture.',
+    tag: 'Vision & OCR',
+    color: 'from-indigo-500/15 to-indigo-600/5',
+    iconColor: 'text-indigo-400',
+    iconBg: 'bg-indigo-500/10 border-indigo-500/20',
+    points: ['OpenCV & Pillow image pipeline', 'Tesseract OCR text extraction', 'Vision provider routing'],
+  },
+  {
+    icon: Activity,
+    title: 'Usage & Quota Monitoring',
+    description: 'Monitor request counts, token consumption, and server-enforced daily High-mode reasoning allocations in real time.',
+    tag: 'Implemented',
+    color: 'from-teal-500/15 to-teal-600/5',
+    iconColor: 'text-teal-400',
+    iconBg: 'bg-teal-500/10 border-teal-500/20',
+    points: ['Real-time request metrics', 'Server-side 5/day High mode limit', 'Token usage visualization'],
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Identity & Security Controls',
+    description: 'Robust authentication with email registration, JWT session tokens, Argon2 password hashing, and user ownership isolation.',
+    tag: 'Implemented',
+    color: 'from-red-500/15 to-red-600/5',
+    iconColor: 'text-red-400',
+    iconBg: 'bg-red-500/10 border-red-500/20',
+    points: ['Argon2 password hashing', 'HttpOnly cookie JWT tokens', 'Isolated user data boundaries'],
   },
 ]
 
@@ -747,7 +814,7 @@ function FeaturesSection() {
         opacity: 1,
         duration: 0.6,
         ease: 'power2.out',
-        stagger: 0.12,
+        stagger: 0.08,
         scrollTrigger: {
           trigger: sectionRef.current,
           start: 'top 75%',
@@ -766,17 +833,17 @@ function FeaturesSection() {
               Platform Capabilities
             </Badge>
             <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              Everything you need.
+              Genuinely Implemented.
               <br />
-              <span className="gradient-text">Nothing you don&apos;t.</span>
+              <span className="gradient-text">Fully Verified.</span>
             </h2>
-            <p className="mt-4 max-w-xl mx-auto text-muted-foreground">
-              A complete AI workspace — not a collection of disconnected tools.
+            <p className="mt-4 max-w-2xl mx-auto text-muted-foreground">
+              Explore the capabilities currently built into NexaAI. Implemented features are functional today; provider-dependent features are clearly disclosed.
             </p>
           </div>
         </FadeUp>
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-2">
           {features.map((feature) => (
             <div
               key={feature.title}
@@ -794,7 +861,7 @@ function FeaturesSection() {
                   <feature.icon className={cn('size-5', feature.iconColor)} />
                 </div>
 
-                <div className="mb-2 flex items-center gap-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
                   <h3 className="text-base font-semibold">{feature.title}</h3>
                   <Badge variant="secondary" className="text-[10px]">{feature.tag}</Badge>
                 </div>
@@ -814,8 +881,10 @@ function FeaturesSection() {
                 </ul>
 
                 <div className="mt-5 flex items-center gap-1 text-xs text-brand opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <span>Learn more</span>
-                  <ChevronRight className="size-3" />
+                  <Link href="/app" className="flex items-center gap-1 hover:underline">
+                    <span>Open in workspace</span>
+                    <ChevronRight className="size-3" />
+                  </Link>
                 </div>
               </div>
             </div>
@@ -827,7 +896,133 @@ function FeaturesSection() {
 }
 
 /* ============================================================
-   WORKFLOW SECTION — how it works
+   ARCHITECTURE & SECURITY SECTION
+   ============================================================ */
+function ArchitectureSection() {
+  const archRef = useRef<HTMLElement>(null)
+
+  const controls = [
+    {
+      icon: Lock,
+      title: 'Argon2 Password Hashing',
+      description: 'Memory-hard Argon2id hashing protecting user credentials against dictionary attacks and offline brute forcing.',
+      status: 'Implemented',
+    },
+    {
+      icon: ShieldCheck,
+      title: 'JWT Session Management',
+      description: 'Cryptographically signed JSON Web Tokens for stateless authentication, session hydration, and request authorization.',
+      status: 'Implemented',
+    },
+    {
+      icon: Database,
+      title: 'PostgreSQL & Alembic Migrations',
+      description: 'Relational data persistence with isolated tenant ownership checks on all conversations, messages, and assets.',
+      status: 'Implemented',
+    },
+    {
+      icon: Server,
+      title: 'Nginx Reverse Proxy & Health Probes',
+      description: 'Containerized reverse proxy routing traffic to FastAPI API and Next.js frontend with live /health and /ready endpoints.',
+      status: 'Implemented',
+    },
+    {
+      icon: Cpu,
+      title: 'Modular Provider Abstraction',
+      description: 'Swappable backend provider interfaces for chat, speech, and vision. Supports OpenAI models when API credentials are provided.',
+      status: 'Configurable',
+    },
+    {
+      icon: Activity,
+      title: 'Server-Enforced Quotas & Rate Limits',
+      description: 'Redis-backed request throttling and strict server-side quota enforcement for 5 daily High-mode reasoning queries per user.',
+      status: 'Implemented',
+    },
+  ]
+
+  useGSAP(() => {
+    gsap.fromTo(
+      '.arch-card',
+      { y: 40, opacity: 0 },
+      {
+        y: 0,
+        opacity: 1,
+        duration: 0.5,
+        stagger: 0.1,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: archRef.current,
+          start: 'top 75%',
+          once: true,
+        },
+      },
+    )
+  }, { scope: archRef })
+
+  return (
+    <section id="architecture" ref={archRef} className="relative py-24 px-6 border-t border-white/6 bg-card/20">
+      <div className="mx-auto max-w-6xl">
+        <FadeUp>
+          <div className="text-center mb-16">
+            <Badge variant="outline" className="mb-4 border-white/10 bg-white/5 text-muted-foreground text-xs">
+              System Architecture & Controls
+            </Badge>
+            <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              Engineering Built on{' '}
+              <span className="gradient-text">Verifiable Truth</span>
+            </h2>
+            <p className="mt-4 max-w-2xl mx-auto text-muted-foreground">
+              Built and tested as an independent AI workspace project. Every control, adapter, and endpoint below is genuinely implemented in the codebase.
+            </p>
+          </div>
+        </FadeUp>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {controls.map((item) => (
+            <div
+              key={item.title}
+              className="arch-card rounded-2xl border border-white/8 bg-card/60 p-6 backdrop-blur-sm hover:border-white/16 transition-all duration-200 flex flex-col"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="size-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
+                  <item.icon className="size-5" />
+                </div>
+                <Badge variant={item.status === 'Implemented' ? 'secondary' : 'outline'} className="text-[10px]">
+                  {item.status}
+                </Badge>
+              </div>
+              <h3 className="text-base font-semibold mb-2">{item.title}</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed flex-1">{item.description}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Modular Provider Notice */}
+        <div className="mt-10 rounded-2xl border border-white/10 bg-white/3 p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div>
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              <Cpu className="size-4 text-brand" />
+              Modular Provider Architecture
+            </h4>
+            <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
+              External providers (OpenAI API, OpenAI Whisper, and OAuth) are designed with modular backend interfaces.
+              Local mock transcription is active out of the box; live commercial provider calls activate seamlessly when credentials are configured.
+            </p>
+          </div>
+          <Link href="/docs">
+            <Button variant="outline" size="sm" className="whitespace-nowrap text-xs border-white/12 hover:bg-white/5">
+              Explore Backend API
+              <ArrowRight className="ml-1.5 size-3" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ============================================================
+   WORKFLOW SECTION — truthful application workflow
    ============================================================ */
 function WorkflowSection() {
   const sectionRef = useRef<HTMLElement>(null)
@@ -835,27 +1030,39 @@ function WorkflowSection() {
   const steps = [
     {
       step: '01',
-      icon: MessageSquare,
-      title: 'Start a conversation',
-      description: 'Ask anything. NexaAI understands context, nuance, and technical depth. Responses stream in real time.',
+      icon: ShieldCheck,
+      title: 'Sign in securely',
+      description: 'Register or authenticate with email and Argon2id-hashed credentials, receiving a cryptographically signed JWT session.',
     },
     {
       step: '02',
-      icon: Layers,
-      title: 'Analyze your text',
-      description: 'Drop any text into NLP Studio. Get sentiment scores, entities, intent, keywords, and readability in seconds.',
+      icon: Brain,
+      title: 'Select a chat mode',
+      description: 'Choose Quick or Standard for lightweight tasks (gpt-4o-mini), or switch to High mode for deep reasoning (5 daily requests included).',
     },
     {
       step: '03',
-      icon: FileText,
-      title: 'Query your documents',
-      description: 'Upload a PDF or document. Ask questions and get AI answers with exact source citations from your content.',
+      icon: MessageSquare,
+      title: 'Start an AI conversation',
+      description: 'Submit prompts with real-time SSE token streaming, markdown rendering, syntax-highlighted code blocks, and branching dialogues.',
     },
     {
       step: '04',
-      icon: Terminal,
-      title: 'Build with the API',
-      description: 'Full REST API with streaming support. Integrate NexaAI into your own products with a few lines of code.',
+      icon: Layers,
+      title: 'Upload or analyze content',
+      description: 'Record or upload audio in Speech Studio, run NLP linguistic analysis, or query documents with semantic vector search architecture.',
+    },
+    {
+      step: '05',
+      icon: CheckCircle2,
+      title: 'Review and manage results',
+      description: 'Edit speech transcripts, copy markdown outputs, insert audio transcriptions directly into chat, or branch active conversation leaves.',
+    },
+    {
+      step: '06',
+      icon: Activity,
+      title: 'Work from unified workspace',
+      description: 'Search curated prompt templates, track real-time token and request usage quotas, and manage all your work seamlessly.',
     },
   ]
 
@@ -867,7 +1074,7 @@ function WorkflowSection() {
         x: 0,
         opacity: 1,
         duration: 0.5,
-        stagger: 0.15,
+        stagger: 0.12,
         ease: 'power2.out',
         scrollTrigger: {
           trigger: sectionRef.current,
@@ -893,31 +1100,31 @@ function WorkflowSection() {
         <FadeUp>
           <div className="text-center mb-16">
             <Badge variant="outline" className="mb-4 border-white/10 bg-white/5 text-muted-foreground text-xs">
-              How It Works
+              Product Workflow
             </Badge>
             <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              Powerful, yet{' '}
-              <span className="gradient-text">simple.</span>
+              Intuitive, Transparent{' '}
+              <span className="gradient-text">Workflow.</span>
             </h2>
+            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
+              From authentication to multimodal analysis, experience a cohesive workspace designed for productivity.
+            </p>
           </div>
         </FadeUp>
 
-        <div className="grid sm:grid-cols-2 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {steps.map((step) => (
-            <div key={step.step} className="workflow-step group relative flex gap-5 rounded-2xl border border-white/8 bg-card/50 p-6 hover:border-white/12 transition-all duration-300">
-              {/* Step number */}
-              <div className="flex-shrink-0">
-                <div className="size-10 rounded-xl gradient-brand flex items-center justify-center text-xs font-bold text-white">
+            <div key={step.step} className="workflow-step group relative flex flex-col rounded-2xl border border-white/8 bg-card/50 p-6 hover:border-white/12 transition-all duration-300">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="size-9 rounded-xl gradient-brand flex items-center justify-center text-xs font-bold text-white shrink-0">
                   {step.step}
                 </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <step.icon className="size-4 text-muted-foreground" />
+                <div className="flex items-center gap-2">
+                  <step.icon className="size-4 text-brand" />
                   <h3 className="text-sm font-semibold">{step.title}</h3>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">{step.description}</p>
               </div>
+              <p className="text-xs text-muted-foreground leading-relaxed flex-1">{step.description}</p>
             </div>
           ))}
         </div>
@@ -965,15 +1172,15 @@ function CtaSection() {
 
       <div className="cta-content relative mx-auto max-w-3xl text-center">
         <Badge variant="outline" className="mb-6 border-border bg-muted/40 text-muted-foreground text-xs dark:border-white/10 dark:bg-white/5">
-          Get started today
+          Get Started Today
         </Badge>
         <h2 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-          Ready for the future
+          Ready to experience
           <br />
-          <span className="gradient-text">of AI?</span>
+          <span className="gradient-text">NexaAI?</span>
         </h2>
-        <p className="mt-5 text-lg text-muted-foreground max-w-xl mx-auto">
-          Join the platform built for serious work — powerful, honest, and beautifully crafted. No gimmicks.
+        <p className="mt-5 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto">
+          Explore the platform built for real productivity — honest engineering, reliable controls, and an elegant interface.
         </p>
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
           <MagneticButton strength={0.2}>
@@ -997,12 +1204,12 @@ function CtaSection() {
           </MagneticButton>
           <Link href="/app">
             <Button variant="ghost" size="lg" className="h-14 px-8 text-base border border-border hover:bg-muted/50 dark:border-white/10 dark:hover:border-white/20 dark:hover:bg-white/5">
-              See a demo
+              Open Workspace
             </Button>
           </Link>
         </div>
-        <p className="mt-6 text-xs text-muted-foreground/40">
-          No credit card required · Free tier available · Cancel anytime
+        <p className="mt-6 text-xs text-muted-foreground/50">
+          Free tier with 5 daily High reasoning requests · No credit card required · Built & verified independently
         </p>
       </div>
     </section>
@@ -1113,6 +1320,7 @@ export default function LandingPage() {
         <ProductPreview />
         <StatsSection />
         <FeaturesSection />
+        <ArchitectureSection />
         <WorkflowSection />
         <CtaSection />
         <Footer />

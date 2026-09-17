@@ -13,7 +13,7 @@ interface AnalysisInputProps {
 const SAMPLE_PRESETS = [
   {
     label: 'Tech Announcement',
-    text: 'NexaAI is thrilled to announce Phase 7 of our high-performance AI platform built with Python, FastAPI, and Next.js. Our engineering team in London worked around the clock to deliver real-time SSE streaming, Argon2id security, and an advanced NLP Analysis Studio. Early performance metrics show outstanding 99.9% uptime and lightning-fast query execution.',
+    text: 'NexaAI delivers an AI productivity platform built with Python, FastAPI, and Next.js. Features include real-time SSE streaming, Argon2id password security, a Curated Prompt Library, and an integrated NLP Analysis Studio with sentiment scoring and entity extraction.',
   },
   {
     label: 'Product Review',

@@ -1,70 +1,75 @@
 import Link from 'next/link'
-import { ArrowLeft, Check, Sparkles, Zap, Shield, Crown } from 'lucide-react'
+import { ArrowLeft, Check, Sparkles, Zap, Shield, Crown, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
 export const metadata = {
-  title: 'Pricing Plans — NexaAI',
-  description: 'Transparent pricing for developers, researchers, and enterprises. Start free today.',
+  title: 'Pricing & Tiers — NexaAI',
+  description: 'Explore active access and planned roadmap tiers for the NexaAI workspace.',
 }
 
 export default function PricingPage() {
   const plans = [
     {
       name: 'Free Starter',
-      badge: 'Zero Commitment',
+      badge: 'Active Today',
       price: '$0',
-      period: 'forever',
-      description: 'Ideal for trying out multimodal chat and exploring prompts.',
+      period: 'free access',
+      description: 'Fully active tier with complete access to all implemented workspace tools.',
       icon: Zap,
+      status: 'active' as const,
       features: [
-        'Quick & Standard chat modes',
-        '200 daily requests allowance',
-        '100 MB multimodal storage',
-        'Access to standard prompt library',
-        'Community support',
+        'Quick & Standard chat modes (gpt-4o-mini)',
+        '5 daily High-mode reasoning requests (gpt-4o)',
+        'Prompt Library with category search',
+        'Speech Studio (mic recording & mock STT)',
+        'NLP Analysis Studio & sentiment evaluation',
+        'Tree-structured conversation history',
+        'Community & issue tracker support',
       ],
-      cta: 'Start Free',
-      ctaHref: '/signup',
-      highlighted: false,
-    },
-    {
-      name: 'Professional',
-      badge: 'Most Popular',
-      price: '$29',
-      period: 'per user / month',
-      description: 'Full access to High-mode deep reasoning models and advanced multimodal analysis.',
-      icon: Crown,
-      features: [
-        'Everything in Starter',
-        'High-mode deep reasoning (5/day or pooled)',
-        'Uncapped Standard & Quick modes',
-        'OCR, vision, & audio transcriptions',
-        'Custom prompt template creation',
-        'Priority SSE response latency',
-        'Export conversations in JSON / Markdown',
-      ],
-      cta: 'Get Started with Pro',
+      cta: 'Start Free Today',
       ctaHref: '/signup',
       highlighted: true,
     },
     {
+      name: 'Professional',
+      badge: 'Roadmap Preview',
+      price: '$29',
+      period: 'planned / month',
+      description: 'Planned tier for expanded reasoning quotas and commercial provider routing.',
+      icon: Crown,
+      status: 'planned' as const,
+      features: [
+        'Everything in Free Starter',
+        'Expanded High-mode daily reasoning allocations',
+        'Direct OpenAI commercial API key integration',
+        'OpenAI Whisper cloud transcription support',
+        'Custom prompt template creation and sharing',
+        'Priority SSE response streaming pipelines',
+        'Export conversations to Markdown and JSON',
+      ],
+      cta: 'Planned (In Development)',
+      ctaHref: '/contact',
+      highlighted: false,
+    },
+    {
       name: 'Enterprise',
-      badge: 'Bespoke Scale',
+      badge: 'Architecture Preview',
       price: 'Custom',
-      period: 'tailored annual contract',
-      description: 'Dedicated cloud deployment, SSO/SAML, and custom model routing.',
+      period: 'planned deployment',
+      description: 'Planned dedicated cloud and private network deployment options.',
       icon: Shield,
+      status: 'planned' as const,
       features: [
         'Everything in Professional',
-        'Custom High-mode daily limit allocation',
-        'SSO / SAML & OAuth account synchronization',
-        'Dedicated PostgreSQL & Redis instances',
-        'Custom system prompt library deployment',
-        'Zero data retention & HIPAA/SOC2 options',
-        '99.9% SLA & dedicated account engineer',
+        'Custom High-mode quota limit configurations',
+        'OAuth identity federation (Google & GitHub)',
+        'Dedicated PostgreSQL and Redis instances',
+        'Isolated private VPC / Nginx configurations',
+        'Custom model provider backend adapters',
+        'Direct architecture support from maintainers',
       ],
-      cta: 'Contact Sales',
+      cta: 'Contact Maintainers',
       ctaHref: '/contact',
       highlighted: false,
     },
@@ -92,17 +97,26 @@ export default function PricingPage() {
 
       {/* Main Content */}
       <main className="mx-auto max-w-6xl px-6 py-16">
-        <div className="mb-14 text-center max-w-2xl mx-auto">
+        <div className="mb-10 text-center max-w-2xl mx-auto">
           <Badge variant="outline" className="mb-4 border-brand/30 text-brand bg-brand/5">
             <Sparkles className="size-3 mr-1.5" />
-            Clear, Predictable Pricing
+            Transparent Platform Access
           </Badge>
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl mb-4">
-            Invest in Pure Productivity
+            Workspace Access & Roadmap
           </h1>
           <p className="text-muted-foreground text-lg">
-            Choose the right tier for your workflow. No hidden token surcharges. Cancel or upgrade anytime.
+            NexaAI is currently free to use with all implemented features. Commercial subscription tiers are shown below as an architectural preview.
           </p>
+        </div>
+
+        {/* Project Status Disclosure Banner */}
+        <div className="mb-12 max-w-3xl mx-auto rounded-2xl border border-brand/20 bg-brand/5 p-4 sm:p-5 flex items-start gap-3.5 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+          <Info className="size-5 text-brand shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold text-foreground">Project Billing Notice: </span>
+            Paid payment processing and automated billing subscriptions are not yet active in production. All users can register and access the platform for free under the Free Starter tier today. Commercial tiers represent planned features.
+          </div>
         </div>
 
         {/* Pricing Cards Grid */}
@@ -148,7 +162,9 @@ export default function PricingPage() {
                 </div>
 
                 <div className="border-t border-border/50 pt-6 my-2 flex-1">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80 mb-4">Features included</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80 mb-4">
+                    {p.status === 'active' ? 'Features active today' : 'Planned capabilities'}
+                  </p>
                   <ul className="space-y-3">
                     {p.features.map((feat) => (
                       <li key={feat} className="flex items-start gap-2.5 text-sm text-muted-foreground">
@@ -165,7 +181,7 @@ export default function PricingPage() {
                       className={`w-full font-semibold h-11 ${
                         p.highlighted
                           ? 'gradient-brand text-white hover:opacity-90 shadow-md'
-                          : 'border border-border/80 hover:bg-muted/50'
+                          : 'border border-border/80 hover:bg-muted/50 text-muted-foreground hover:text-foreground'
                       }`}
                       variant={p.highlighted ? 'default' : 'outline'}
                     >
@@ -179,7 +195,7 @@ export default function PricingPage() {
         </div>
 
         <div className="mt-20 pt-8 border-t border-border/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} NexaAI. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} NexaAI. Built with precision.</p>
           <div className="flex gap-6">
             <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
             <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>

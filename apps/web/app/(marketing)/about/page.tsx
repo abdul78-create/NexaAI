@@ -70,7 +70,7 @@ export default function AboutPage() {
             <div className="size-12 rounded-xl bg-brand/10 text-brand flex items-center justify-center mx-auto">
               <CheckCircle2 className="size-6" />
             </div>
-            <h3 className="font-semibold text-lg">Enterprise Solid</h3>
+            <h3 className="font-semibold text-lg">Modern Architecture</h3>
             <p className="text-sm text-muted-foreground">
               Production-ready FastAPI microservices, PostgreSQL with Alembic migrations, and Redis caching.
             </p>

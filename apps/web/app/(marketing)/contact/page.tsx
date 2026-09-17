@@ -66,7 +66,7 @@ export default function ContactPage() {
               </div>
               <h3 className="font-semibold text-lg">Response Time</h3>
               <p className="text-sm text-muted-foreground">
-                We respond within 24 hours on business days for standard plans, and under 1 hour for priority enterprise.
+                We review technical feedback and community inquiries typically within 1-2 business days.
               </p>
             </div>
 
@@ -74,8 +74,8 @@ export default function ContactPage() {
               <div className="size-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center">
                 <MapPin className="size-5" />
               </div>
-              <h3 className="font-semibold text-lg">Headquarters</h3>
-              <p className="text-sm text-muted-foreground">San Francisco, CA & Remote Distributed</p>
+              <h3 className="font-semibold text-lg">Project Maintainers</h3>
+              <p className="text-sm text-muted-foreground">Independent AI Workspace · Distributed Project</p>
             </div>
           </div>
 
