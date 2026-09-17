@@ -1,8 +1,9 @@
 """Conversation and ChatMessage ORM models."""
 
 import uuid
+from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -25,6 +26,12 @@ class Conversation(Base, TimestampMixin):
         nullable=False,
         index=True,
     )
+    folder_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("folders.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     title: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
@@ -35,10 +42,31 @@ class Conversation(Base, TimestampMixin):
         nullable=False,
         default="nexa-standard",
     )
+    is_pinned: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
     is_archived: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=False,
+    )
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
+    )
+    active_leaf_message_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey(
+            "chat_messages.id",
+            ondelete="SET NULL",
+            use_alter=True,
+            name="fk_conversations_active_leaf_message_id",
+        ),
+        nullable=True,
+        index=True,
     )
 
     # Relationships
@@ -46,12 +74,22 @@ class Conversation(Base, TimestampMixin):
         "User",
         back_populates="conversations",
     )
+    folder: Mapped[Optional["Folder"]] = relationship(  # type: ignore # noqa: F821
+        "Folder",
+        back_populates="conversations",
+    )
     messages: Mapped[List["ChatMessage"]] = relationship(
         "ChatMessage",
         back_populates="conversation",
         cascade="all, delete-orphan",
         order_by="ChatMessage.created_at",
+        foreign_keys="[ChatMessage.conversation_id]",
         lazy="selectin",
+    )
+    active_leaf_message: Mapped[Optional["ChatMessage"]] = relationship(
+        "ChatMessage",
+        foreign_keys=[active_leaf_message_id],
+        post_update=True,
     )
     shares: Mapped[List["ConversationShare"]] = relationship(  # type: ignore # noqa: F821
         "ConversationShare",
@@ -80,6 +118,12 @@ class ChatMessage(Base, TimestampMixin):
         Uuid(as_uuid=True),
         ForeignKey("conversations.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
+    )
+    parent_message_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("chat_messages.id", ondelete="SET NULL"),
+        nullable=True,
         index=True,
     )
     role: Mapped[str] = mapped_column(
@@ -116,6 +160,18 @@ class ChatMessage(Base, TimestampMixin):
     conversation: Mapped["Conversation"] = relationship(
         "Conversation",
         back_populates="messages",
+        foreign_keys=[conversation_id],
+    )
+    parent_message: Mapped[Optional["ChatMessage"]] = relationship(
+        "ChatMessage",
+        remote_side="[ChatMessage.id]",
+        back_populates="child_messages",
+        foreign_keys=[parent_message_id],
+    )
+    child_messages: Mapped[List["ChatMessage"]] = relationship(
+        "ChatMessage",
+        back_populates="parent_message",
+        foreign_keys=[parent_message_id],
     )
     message_attachments: Mapped[List["ChatMessageAttachment"]] = relationship(  # type: ignore # noqa: F821
         "ChatMessageAttachment",
@@ -127,4 +183,3 @@ class ChatMessage(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<ChatMessage {self.id} [{self.role}]>"
-

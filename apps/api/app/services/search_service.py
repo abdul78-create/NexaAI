@@ -46,6 +46,7 @@ class SearchService:
         role: Optional[str] = None,
         from_date: Optional[datetime] = None,
         to_date: Optional[datetime] = None,
+        include_archived: bool = False,
         page: int = 1,
         page_size: int = 20,
     ) -> SearchResponse:
@@ -58,7 +59,12 @@ class SearchService:
         safe_query_pattern = f"%{clean_query.replace('%', '\\%').replace('_', '\\_')}%" if clean_query else "%"
 
         # Base conversation conditions
-        conv_conditions = [Conversation.user_id == user_id]
+        conv_conditions = [
+            Conversation.user_id == user_id,
+            Conversation.deleted_at.is_(None),
+        ]
+        if not include_archived:
+            conv_conditions.append(Conversation.is_archived == False)  # noqa: E712
         if conversation_id:
             conv_conditions.append(Conversation.id == conversation_id)
         if from_date:
@@ -99,7 +105,10 @@ class SearchService:
         msg_conditions = [
             Conversation.user_id == user_id,
             ChatMessage.conversation_id == Conversation.id,
+            Conversation.deleted_at.is_(None),
         ]
+        if not include_archived:
+            msg_conditions.append(Conversation.is_archived == False)  # noqa: E712
         if conversation_id:
             msg_conditions.append(ChatMessage.conversation_id == conversation_id)
         if role:
@@ -110,6 +119,7 @@ class SearchService:
             msg_conditions.append(ChatMessage.created_at <= to_date)
         if clean_query:
             msg_conditions.append(ChatMessage.content.ilike(safe_query_pattern))
+
 
         msg_stmt = (
             select(ChatMessage, Conversation.title)

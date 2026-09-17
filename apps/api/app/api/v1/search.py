@@ -24,6 +24,7 @@ async def search_user_conversations(
     role: Optional[str] = Query(None, description="Optional message role filter ('user' | 'assistant')"),
     from_date: Optional[datetime] = Query(None, description="Optional start datetime filter"),
     to_date: Optional[datetime] = Query(None, description="Optional end datetime filter"),
+    include_archived: bool = Query(False, description="Include archived conversations in search results"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Page size limit"),
     current_user: User = Depends(get_current_active_user),
@@ -38,6 +39,8 @@ async def search_user_conversations(
         role=role,
         from_date=from_date,
         to_date=to_date,
+        include_archived=include_archived,
         page=page,
         page_size=page_size,
     )
+

@@ -87,7 +87,7 @@ export const AudioUploadPanel: React.FC<AudioUploadPanelProps> = ({
         className={`relative flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${
           dragActive
             ? 'border-indigo-500 bg-indigo-500/10'
-            : 'border-slate-800 hover:border-slate-700 bg-slate-900/40 hover:bg-slate-900/60'
+            : 'border-border hover:border-indigo-500/50 bg-muted/20 hover:bg-muted/40'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <input
@@ -99,14 +99,14 @@ export const AudioUploadPanel: React.FC<AudioUploadPanelProps> = ({
           className="hidden"
         />
 
-        <div className="p-3 bg-slate-800/80 text-indigo-400 rounded-xl mb-3 shadow-inner">
+        <div className="p-3 bg-muted text-indigo-500 rounded-xl mb-3 shadow-inner">
           <FileAudio className="w-8 h-8" />
         </div>
 
-        <p className="text-sm font-medium text-slate-200 text-center">
-          <span className="text-indigo-400 font-semibold">Click to upload</span> or drag and drop audio file
+        <p className="text-sm font-medium text-foreground text-center">
+          <span className="text-indigo-500 font-semibold">Click to upload</span> or drag and drop audio file
         </p>
-        <p className="text-xs text-slate-500 mt-1 text-center">
+        <p className="text-xs text-muted-foreground mt-1 text-center">
           Supported: WAV, MP3, M4A, WebM, OGG (Max {maxSizeMB} MB)
         </p>
       </div>

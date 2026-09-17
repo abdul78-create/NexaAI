@@ -3,7 +3,9 @@
  * Communication with FastAPI backend NLP Analysis endpoints with fallback for guest mode.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+import { getApiBaseUrl } from './api-config'
+
+const API_BASE = getApiBaseUrl()
 
 export interface SentimentData {
   label: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL'

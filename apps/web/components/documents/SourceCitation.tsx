@@ -34,7 +34,7 @@ export function SourceCitation({ citation }: SourceCitationProps) {
           </div>
 
           <p className="text-[11px] font-mono text-foreground/90 bg-white/5 p-2 rounded border border-white/5 leading-relaxed italic">
-            "{citation.excerpt}"
+            &ldquo;{citation.excerpt}&rdquo;
           </p>
 
           <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground font-mono">

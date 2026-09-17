@@ -3,7 +3,9 @@
  * Communication with FastAPI backend document upload, vector search, & RAG Q&A endpoints.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+import { getApiBaseUrl } from './api-config'
+
+const API_BASE = getApiBaseUrl()
 
 export interface DocumentChunkItem {
   id: string

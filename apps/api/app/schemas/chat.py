@@ -18,12 +18,33 @@ class MessageResponse(BaseModel):
 
     id: UUID
     conversation_id: UUID
+    parent_message_id: Optional[UUID] = None
     role: str
     content: str
     model: Optional[str] = None
     input_tokens: int = 0
     output_tokens: int = 0
     created_at: datetime
+    sibling_index: Optional[int] = 1
+    sibling_count: Optional[int] = 1
+    sibling_ids: Optional[List[UUID]] = []
+
+
+class MessageEditRequest(BaseModel):
+    """Payload to edit a user message prompt."""
+    content: str = Field(..., min_length=1, description="Edited prompt content.")
+
+
+class BranchSelectRequest(BaseModel):
+    """Payload to select a conversation active leaf or branch."""
+    message_id: UUID = Field(..., description="Selected message UUID.")
+
+
+class BranchSelectResponse(BaseModel):
+    """Response containing updated active leaf ID and active message tree path."""
+    active_leaf_message_id: Optional[UUID] = None
+    messages: List[MessageResponse] = []
+
 
 
 class ConversationCreate(BaseModel):
@@ -37,6 +58,8 @@ class ConversationUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=255)
     model: Optional[str] = Field(None, max_length=100)
     is_archived: Optional[bool] = None
+    is_pinned: Optional[bool] = None
+    folder_id: Optional[UUID] = None
 
 
 class ConversationResponse(BaseModel):
@@ -48,8 +71,13 @@ class ConversationResponse(BaseModel):
     title: str
     model: str
     is_archived: bool
+    is_pinned: bool = False
+    folder_id: Optional[UUID] = None
+    deleted_at: Optional[datetime] = None
+    active_leaf_message_id: Optional[UUID] = None
     created_at: datetime
     updated_at: datetime
+
 
 
 class ConversationDetailResponse(ConversationResponse):
@@ -68,6 +96,7 @@ class ChatStreamRequest(BaseModel):
     conversation_id: Optional[UUID] = Field(None, description="Existing conversation ID or None to start a new one.")
     content: str = Field(..., min_length=1, description="User prompt text.")
     model: Optional[str] = Field("nexa-standard", description="Selected model identifier.")
+    mode: Optional[str] = Field("standard", description="Selected chat mode: quick | standard | high.")
     attachments: Optional[List[AttachmentInputItem]] = Field(default_factory=list, description="Optional multimodal attachments.")
     options: Optional[dict] = Field(default_factory=dict, description="Execution flags (use_ocr, use_rag, etc.).")
 

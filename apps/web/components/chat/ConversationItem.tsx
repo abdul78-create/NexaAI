@@ -9,14 +9,22 @@ import {
   Check,
   X,
   Pin,
+  PinOff,
+  Archive,
+  FolderInput,
+  RotateCcw,
+  AlertTriangle,
 } from 'lucide-react'
-import { Conversation } from '@/types/chat'
+import { Conversation, Folder } from '@/types/chat'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
@@ -27,6 +35,13 @@ interface ConversationItemProps {
   onSelect: (id: string) => void
   onDelete: (id: string) => void
   onRename: (id: string, newTitle: string) => void
+  onPin?: (id: string) => void
+  onArchive?: (id: string) => void
+  onMoveToFolder?: (id: string, folderId: string | null) => void
+  onRestore?: (id: string) => void
+  onPurge?: (id: string) => void
+  isTrashView?: boolean
+  folders?: Folder[]
 }
 
 export function ConversationItem({
@@ -35,6 +50,13 @@ export function ConversationItem({
   onSelect,
   onDelete,
   onRename,
+  onPin,
+  onArchive,
+  onMoveToFolder,
+  onRestore,
+  onPurge,
+  isTrashView = false,
+  folders = [],
 }: ConversationItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(conversation.title)
@@ -158,22 +180,108 @@ export function ConversationItem({
               </Button>
             }
           />
-          <DropdownMenuContent align="end" className="w-36 bg-popover/95 backdrop-blur-md border border-white/10 shadow-xl">
-            <DropdownMenuItem
-              onClick={() => setIsEditing(true)}
-              className="gap-2 text-xs cursor-pointer"
-            >
-              <Pencil className="size-3.5" />
-              <span>Rename</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-white/6 my-1" />
-            <DropdownMenuItem
-              onClick={() => onDelete(conversation.id)}
-              className="gap-2 text-xs text-destructive focus:text-destructive cursor-pointer"
-            >
-              <Trash2 className="size-3.5" />
-              <span>Delete</span>
-            </DropdownMenuItem>
+          <DropdownMenuContent align="end" className="w-44 bg-popover/95 backdrop-blur-md border border-white/10 shadow-xl">
+            {isTrashView ? (
+              <>
+                {onRestore && (
+                  <DropdownMenuItem
+                    onClick={() => onRestore(conversation.id)}
+                    className="gap-2 text-xs text-emerald-400 focus:text-emerald-300 cursor-pointer"
+                  >
+                    <RotateCcw className="size-3.5" />
+                    <span>Restore Chat</span>
+                  </DropdownMenuItem>
+                )}
+                {onPurge && (
+                  <DropdownMenuItem
+                    onClick={() => onPurge(conversation.id)}
+                    className="gap-2 text-xs text-destructive focus:text-destructive cursor-pointer"
+                  >
+                    <AlertTriangle className="size-3.5" />
+                    <span>Purge Permanently</span>
+                  </DropdownMenuItem>
+                )}
+              </>
+            ) : (
+              <>
+                <DropdownMenuItem
+                  onClick={() => setIsEditing(true)}
+                  className="gap-2 text-xs cursor-pointer"
+                >
+                  <Pencil className="size-3.5" />
+                  <span>Rename</span>
+                </DropdownMenuItem>
+
+                {onPin && (
+                  <DropdownMenuItem
+                    onClick={() => onPin(conversation.id)}
+                    className="gap-2 text-xs cursor-pointer"
+                  >
+                    {conversation.pinned ? (
+                      <>
+                        <PinOff className="size-3.5" />
+                        <span>Unpin Chat</span>
+                      </>
+                    ) : (
+                      <>
+                        <Pin className="size-3.5" />
+                        <span>Pin Chat</span>
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                )}
+
+                {onArchive && (
+                  <DropdownMenuItem
+                    onClick={() => onArchive(conversation.id)}
+                    className="gap-2 text-xs cursor-pointer"
+                  >
+                    <Archive className="size-3.5" />
+                    <span>{conversation.isArchived ? 'Unarchive' : 'Archive'}</span>
+                  </DropdownMenuItem>
+                )}
+
+                {onMoveToFolder && folders.length > 0 && (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="gap-2 text-xs cursor-pointer">
+                      <FolderInput className="size-3.5" />
+                      <span>Move to Folder</span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-40 bg-popover/95 backdrop-blur-md border border-white/10 shadow-xl">
+                      <DropdownMenuItem
+                        onClick={() => onMoveToFolder(conversation.id, null)}
+                        className="text-xs cursor-pointer"
+                      >
+                        <span className={cn(!conversation.folderId && 'font-semibold text-brand')}>
+                          None (Un-file)
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-white/6 my-1" />
+                      {folders.map((f) => (
+                        <DropdownMenuItem
+                          key={f.id}
+                          onClick={() => onMoveToFolder(conversation.id, f.id)}
+                          className="text-xs cursor-pointer truncate"
+                        >
+                          <span className={cn(conversation.folderId === f.id && 'font-semibold text-brand')}>
+                            {f.name}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                )}
+
+                <DropdownMenuSeparator className="bg-white/6 my-1" />
+                <DropdownMenuItem
+                  onClick={() => onDelete(conversation.id)}
+                  className="gap-2 text-xs text-destructive focus:text-destructive cursor-pointer"
+                >
+                  <Trash2 className="size-3.5" />
+                  <span>Move to Trash</span>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

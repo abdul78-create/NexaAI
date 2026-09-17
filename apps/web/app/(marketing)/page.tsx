@@ -105,22 +105,22 @@ function GridBackground() {
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
       {/* Dot grid */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 opacity-40 dark:opacity-60"
         style={{
-          backgroundImage: 'radial-gradient(circle, oklch(1 0 0 / 0.06) 1px, transparent 1px)',
-          backgroundSize: '40px 40px',
+          backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)',
+          backgroundSize: '36px 36px',
           maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%)',
         }}
       />
       {/* Line grid subtle */}
       <div
-        className="absolute inset-0 opacity-[0.02]"
+        className="absolute inset-0 opacity-[0.025] dark:opacity-[0.035]"
         style={{
           backgroundImage: `
-            linear-gradient(oklch(1 0 0) 1px, transparent 1px),
-            linear-gradient(90deg, oklch(1 0 0) 1px, transparent 1px)
+            linear-gradient(currentColor 1px, transparent 1px),
+            linear-gradient(90deg, currentColor 1px, transparent 1px)
           `,
-          backgroundSize: '80px 80px',
+          backgroundSize: '72px 72px',
         }}
       />
     </div>
@@ -964,7 +964,7 @@ function CtaSection() {
       />
 
       <div className="cta-content relative mx-auto max-w-3xl text-center">
-        <Badge variant="outline" className="mb-6 border-white/10 bg-white/5 text-muted-foreground text-xs">
+        <Badge variant="outline" className="mb-6 border-border bg-muted/40 text-muted-foreground text-xs dark:border-white/10 dark:bg-white/5">
           Get started today
         </Badge>
         <h2 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
@@ -996,7 +996,7 @@ function CtaSection() {
             </Link>
           </MagneticButton>
           <Link href="/app">
-            <Button variant="ghost" size="lg" className="h-14 px-8 text-base border border-white/10 hover:border-white/20 hover:bg-white/5">
+            <Button variant="ghost" size="lg" className="h-14 px-8 text-base border border-border hover:bg-muted/50 dark:border-white/10 dark:hover:border-white/20 dark:hover:bg-white/5">
               See a demo
             </Button>
           </Link>
@@ -1014,13 +1014,38 @@ function CtaSection() {
    ============================================================ */
 function Footer() {
   const cols = [
-    { heading: 'Product', links: ['Features', 'NLP Studio', 'Documents', 'Pricing', 'Changelog'] },
-    { heading: 'Developers', links: ['API Docs', 'SDK', 'Status', 'GitHub', 'Examples'] },
-    { heading: 'Company', links: ['About', 'Blog', 'Privacy', 'Terms', 'Contact'] },
+    {
+      heading: 'Product',
+      links: [
+        { label: 'Features', href: '#features' },
+        { label: 'Chat Workspace', href: '/app' },
+        { label: 'Prompt Library', href: '/app/prompts' },
+        { label: 'Pricing Plans', href: '/pricing' },
+        { label: 'Changelog', href: '/about#changelog' },
+      ],
+    },
+    {
+      heading: 'Developers',
+      links: [
+        { label: 'API Documentation', href: '/docs', external: true },
+        { label: 'System Health', href: '/health', external: true },
+        { label: 'GitHub Repository', href: 'https://github.com', external: true },
+        { label: 'Usage & Quotas', href: '/app/usage' },
+      ],
+    },
+    {
+      heading: 'Company',
+      links: [
+        { label: 'About Us', href: '/about' },
+        { label: 'Contact Support', href: '/contact' },
+        { label: 'Privacy Policy', href: '/privacy' },
+        { label: 'Terms of Service', href: '/terms' },
+      ],
+    },
   ]
 
   return (
-    <footer className="border-t border-white/6 pt-16 pb-10 px-6">
+    <footer className="border-t border-border/40 bg-background/50 backdrop-blur-sm pt-16 pb-10 px-6">
       <div className="mx-auto max-w-7xl">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           {/* Brand column */}
@@ -1031,21 +1056,35 @@ function Footer() {
               </div>
               <span className="font-semibold">Nexa<span className="gradient-text">AI</span></span>
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-[180px]">
-              Premium AI platform for intelligent conversation and analysis.
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-[200px]">
+              Premium AI platform for intelligent conversation, deep reasoning, and multimodal analysis.
             </p>
           </div>
 
           {/* Link columns */}
           {cols.map((col) => (
             <div key={col.heading}>
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 mb-4">{col.heading}</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/80 mb-4">{col.heading}</h4>
               <ul className="space-y-2.5">
                 {col.links.map((link) => (
-                  <li key={link}>
-                    <Link href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150">
-                      {link}
-                    </Link>
+                  <li key={link.label}>
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
+                      >
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -1053,9 +1092,9 @@ function Footer() {
           ))}
         </div>
 
-        <div className="border-t border-white/6 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-muted-foreground/50">© 2024 NexaAI. Built with precision.</p>
-          <p className="text-xs text-muted-foreground/30">Powered by Next.js, FastAPI, and OpenAI</p>
+        <div className="border-t border-border/40 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-muted-foreground/60">© {new Date().getFullYear()} NexaAI. Built with precision.</p>
+          <p className="text-xs text-muted-foreground/40">Next-generation AI conversation & reasoning workspace</p>
         </div>
       </div>
     </footer>

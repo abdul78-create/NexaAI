@@ -9,16 +9,24 @@ interface MessageListProps {
   messages: Message[]
   isStreaming: boolean
   modelName: string
+  mode?: string
   onSelectPrompt: (prompt: string) => void
   onRegenerate: () => void
+  onRegenerateMessage?: (messageId: string) => void
+  onEditMessage?: (messageId: string, newContent: string) => Promise<void> | void
+  onSelectBranch?: (targetMessageId: string) => void
 }
 
 export function MessageList({
   messages,
   isStreaming,
   modelName,
+  mode,
   onSelectPrompt,
   onRegenerate,
+  onRegenerateMessage,
+  onEditMessage,
+  onSelectBranch,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -33,7 +41,7 @@ export function MessageList({
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex overflow-y-auto">
-        <EmptyChatState onSelectPrompt={onSelectPrompt} modelName={modelName} />
+        <EmptyChatState onSelectPrompt={onSelectPrompt} modelName={modelName} mode={mode} />
       </div>
     )
   }
@@ -56,7 +64,9 @@ export function MessageList({
             message={msg}
             isLastAssistantMessage={index === lastAssistantIndex}
             isStreaming={isStreaming}
-            onRegenerate={onRegenerate}
+            onRegenerate={onRegenerateMessage || onRegenerate}
+            onEdit={onEditMessage}
+            onSelectBranch={onSelectBranch}
           />
         ))}
       </div>

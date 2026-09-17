@@ -17,6 +17,7 @@ from app.core.security import (
     verify_password,
 )
 from app.db.models.auth import RefreshToken
+from app.db.models.oauth_account import OAuthAccount
 from app.db.models.user import User
 from app.schemas.auth import UserRegisterRequest
 
@@ -207,3 +208,81 @@ class AuthService:
             return True
 
         return False
+
+    @classmethod
+    async def create_or_link_oauth_user(
+        cls,
+        db: AsyncSession,
+        provider: str,
+        provider_account_id: str,
+        email: Optional[str] = None,
+        display_name: Optional[str] = None,
+    ) -> User:
+        """Create or link a user authenticated via OAuth provider.
+
+        1. Check if OAuthAccount exists -> return linked user.
+        2. If not, check if User with matching email exists -> link OAuthAccount.
+        3. If no matching user, create new User (without password) + OAuthAccount.
+        """
+        # 1. Check existing OAuth link
+        stmt = (
+            select(OAuthAccount)
+            .where(
+                OAuthAccount.provider == provider,
+                OAuthAccount.provider_account_id == provider_account_id,
+            )
+            .options(selectinload(OAuthAccount.user))
+        )
+        result = await db.execute(stmt)
+        oauth_acc = result.scalar_one_or_none()
+
+        if oauth_acc and oauth_acc.user:
+            user = oauth_acc.user
+            if not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="User account is deactivated.",
+                )
+            if email and not oauth_acc.provider_email:
+                oauth_acc.provider_email = email.strip().lower()
+                await db.commit()
+            return user
+
+        # 2. Check if user with matching email already exists
+        target_email = email.strip().lower() if email else None
+        user: Optional[User] = None
+        if target_email:
+            user = await cls.get_user_by_email(db, target_email)
+
+        if user:
+            if not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="User account is deactivated.",
+                )
+        else:
+            # 3. Create new User
+            effective_email = target_email or f"{provider}_{provider_account_id}@oauth.local"
+            effective_name = display_name.strip() if display_name else f"{provider.capitalize()} User"
+            user = User(
+                email=effective_email,
+                hashed_password=None,
+                display_name=effective_name,
+                is_active=True,
+                is_verified=True,
+            )
+            db.add(user)
+            await db.flush()
+
+        # Link new OAuthAccount
+        new_oauth = OAuthAccount(
+            user_id=user.id,
+            provider=provider,
+            provider_account_id=provider_account_id,
+            provider_email=target_email,
+        )
+        db.add(new_oauth)
+        await db.commit()
+        await db.refresh(user)
+        return user
+

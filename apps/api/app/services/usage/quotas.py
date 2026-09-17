@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.db.models.usage import AIUsageLog
 from app.db.models.attachment import Attachment
 
@@ -106,9 +107,49 @@ class QuotaService:
 
         return True
 
+    async def get_high_mode_usage(self, user_id: uuid.UUID) -> Dict[str, Any]:
+        """Get daily High-mode usage count and remaining requests."""
+        now = datetime.now(timezone.utc)
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        limit = settings.CHAT_MODE_HIGH_DAILY_LIMIT
+
+        stmt = (
+            select(func.count(AIUsageLog.id))
+            .where(
+                AIUsageLog.user_id == user_id,
+                AIUsageLog.mode == "high",
+                AIUsageLog.status == "success",
+                AIUsageLog.created_at >= start_of_day,
+            )
+        )
+        res = await self.db.execute(stmt)
+        used = res.scalar() or 0
+        remaining = max(0, limit - used)
+        next_reset = (start_of_day + timedelta(days=1)).isoformat()
+
+        return {
+            "mode": "high",
+            "limit": limit,
+            "used": used,
+            "remaining": remaining,
+            "resets_at": next_reset,
+        }
+
+    async def check_high_mode_quota(self, user_id: uuid.UUID) -> bool:
+        """Check if user has remaining High-mode requests today."""
+        status = await self.get_high_mode_usage(user_id)
+        if status["remaining"] <= 0:
+            raise QuotaExceededError(
+                message=f"Daily limit of {status['limit']} High-mode requests reached. Resets tomorrow at 00:00 UTC.",
+                feature="high_mode",
+                resets_at=status["resets_at"],
+            )
+        return True
+
     async def get_user_quota_summary(self, user_id: uuid.UUID) -> Dict[str, Any]:
         """Return comprehensive quota consumption breakdown for dashboard display."""
         daily = await self.get_daily_usage(user_id)
+        high_mode = await self.get_high_mode_usage(user_id)
 
         return {
             "plan_code": "pro_tier",
@@ -131,6 +172,14 @@ class QuotaService:
                     "remaining": max(0, DEFAULT_QUOTAS["storage_bytes_limit"] - daily["storage_bytes"]),
                     "unit": "bytes",
                 },
+                "high_mode": {
+                    "limit": high_mode["limit"],
+                    "used": high_mode["used"],
+                    "remaining": high_mode["remaining"],
+                    "unit": "requests/day",
+                },
             },
+            "high_mode_status": high_mode,
             "resets_at": daily["resets_at"],
         }
+

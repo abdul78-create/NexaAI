@@ -1,7 +1,7 @@
 """User ORM model."""
 
 import uuid
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 from sqlalchemy import Boolean, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -25,9 +25,10 @@ class User(Base, TimestampMixin):
         index=True,
         nullable=False,
     )
-    hashed_password: Mapped[str] = mapped_column(
+    hashed_password: Mapped[Optional[str]] = mapped_column(
         String(255),
-        nullable=False,
+        nullable=True,
+        doc="Argon2id hash. NULL for OAuth-only accounts.",
     )
     display_name: Mapped[str] = mapped_column(
         String(100),
@@ -62,6 +63,12 @@ class User(Base, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    folders: Mapped[List["Folder"]] = relationship(  # type: ignore # noqa: F821
+        "Folder",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
     nlp_analyses: Mapped[List["NLPAnalysis"]] = relationship(  # type: ignore # noqa: F821
         "NLPAnalysis",
         back_populates="user",
@@ -80,6 +87,33 @@ class User(Base, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="select",
     )
+    oauth_accounts: Mapped[List["OAuthAccount"]] = relationship(  # type: ignore # noqa: F821
+        "OAuthAccount",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    prompts: Mapped[List["Prompt"]] = relationship(  # type: ignore # noqa: F821
+        "Prompt",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="select",
+    )
+
+    @property
+    def has_password(self) -> bool:
+        """Whether the user has a local password set."""
+        return self.hashed_password is not None
+
+    @property
+    def linked_providers(self) -> List[str]:
+        """List of linked OAuth provider names."""
+        return [oa.provider for oa in self.oauth_accounts]
+
+    @property
+    def oauth_providers(self) -> List[str]:
+        """Alias for linked OAuth provider names."""
+        return self.linked_providers
 
     def __repr__(self) -> str:
         return f"<User {self.email} ({self.id})>"

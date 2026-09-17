@@ -113,11 +113,13 @@ class ExportService:
             .where(
                 Conversation.id == conversation_id,
                 Conversation.user_id == user_id,
+                Conversation.deleted_at.is_(None),
             )
             .options(selectinload(Conversation.messages))
         )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
+
 
     @classmethod
     async def export_markdown(

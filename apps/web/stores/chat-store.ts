@@ -1,34 +1,83 @@
 import { create } from 'zustand'
-import { Conversation, Message } from '@/types/chat'
+import { Conversation, Folder, Message } from '@/types/chat'
 import { INITIAL_CONVERSATIONS, AI_MODELS, generateMockAiResponse } from '@/lib/mock-data'
 import { useAuthStore } from '@/stores/auth-store'
 import {
   deleteConversationApi,
+  editMessageApi,
   fetchConversationDetail,
+  fetchTrashedConversations,
   fetchUserConversations,
+  purgeConversationApi,
+  regenerateMessageApi,
+  restoreConversationApi,
+  selectBranchApi,
   streamChatCompletion,
+  trashConversationApi,
   updateConversationApi,
 } from '@/lib/chat-api'
+import {
+  createFolderApi,
+  deleteFolderApi,
+  fetchUserFolders,
+  updateFolderApi,
+} from '@/lib/folders-api'
+import { getApiBaseUrl } from '@/lib/api-config'
+
+export type WorkspaceView = 'all' | 'archived' | 'trash'
+export type ChatMode = 'quick' | 'standard' | 'high'
+
+export interface HighModeQuota {
+  mode: string
+  limit: number
+  used: number
+  remaining: number
+  resets_at: string
+}
 
 interface ChatState {
   conversations: Conversation[]
+  trashedConversations: Conversation[]
+  folders: Folder[]
   activeConversationId: string | null
   selectedModelId: string
+  selectedMode: ChatMode
+  highModeQuota: HighModeQuota | null
+  draftInput: string
   searchQuery: string
+  activeView: WorkspaceView
+  selectedFolderId: string | null
   isStreaming: boolean
   isSidebarCollapsed: boolean
   isMobileSidebarOpen: boolean
   isLoadingConversations: boolean
+  isLoadingFolders: boolean
   error: string | null
 
   // Actions
   fetchConversations: () => Promise<void>
+  fetchTrashedConversationsStore: () => Promise<void>
+  fetchFolders: () => Promise<void>
+  fetchHighModeQuota: () => Promise<void>
+  createFolder: (name: string, color?: string) => Promise<Folder | null>
+  updateFolder: (folderId: string, updates: { name?: string; color?: string }) => Promise<void>
+  deleteFolder: (folderId: string) => Promise<void>
+  togglePinConversation: (id: string) => Promise<void>
+  toggleArchiveConversation: (id: string) => Promise<void>
+  moveConversationToFolder: (id: string, folderId: string | null) => Promise<void>
+  trashConversation: (id: string) => Promise<void>
+  restoreConversation: (id: string) => Promise<void>
+  purgeConversation: (id: string) => Promise<void>
+  setActiveView: (view: WorkspaceView) => void
+  setSelectedFolderId: (folderId: string | null) => void
   createNewChat: () => void
   selectConversation: (id: string) => Promise<void>
   deleteConversation: (id: string) => Promise<void>
   renameConversation: (id: string, newTitle: string) => Promise<void>
   setSearchQuery: (q: string) => void
   setSelectedModel: (modelId: string) => void
+  setSelectedMode: (mode: ChatMode) => void
+  setDraftInput: (text: string) => void
   toggleSidebar: () => void
   setSidebarCollapsed: (collapsed: boolean) => void
   setMobileSidebarOpen: (open: boolean) => void
@@ -36,52 +85,311 @@ interface ChatState {
   stopGeneration: () => void
   regenerateLastMessage: () => Promise<void>
   clearActiveConversation: () => void
+  selectBranch: (conversationId: string, messageId: string) => Promise<void>
+  editUserMessageBranch: (messageId: string, content: string) => Promise<void>
+  regenerateAssistantMessageBranch: (messageId: string) => Promise<void>
 }
 
 let activeAbortController: AbortController | null = null
 
 export const useChatStore = create<ChatState>((set, get) => ({
   conversations: INITIAL_CONVERSATIONS,
+  trashedConversations: [],
+  folders: [],
   activeConversationId: 'conv-fastapi-async',
   selectedModelId: 'nexa-standard',
+  selectedMode: 'standard',
+  highModeQuota: null,
+  draftInput: '',
   searchQuery: '',
+  activeView: 'all',
+  selectedFolderId: null,
   isStreaming: false,
-  isSidebarCollapsed: false,
+  isSidebarCollapsed: typeof window !== 'undefined' ? localStorage.getItem('nexaai_sidebar_collapsed') === 'true' : false,
   isMobileSidebarOpen: false,
   isLoadingConversations: false,
+  isLoadingFolders: false,
   error: null,
+
+  setSelectedMode: (mode: ChatMode) => set({ selectedMode: mode }),
+  setDraftInput: (draft: string) => set({ draftInput: draft }),
+
+  toggleSidebar: () => {
+    const next = !get().isSidebarCollapsed
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('nexaai_sidebar_collapsed', String(next))
+      } catch {}
+    }
+    set({ isSidebarCollapsed: next })
+  },
+
+  setSidebarCollapsed: (collapsed: boolean) => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('nexaai_sidebar_collapsed', String(collapsed))
+      } catch {}
+    }
+    set({ isSidebarCollapsed: collapsed })
+  },
+
+  setMobileSidebarOpen: (open: boolean) => set({ isMobileSidebarOpen: open }),
+
+  fetchHighModeQuota: async () => {
+    const token = useAuthStore.getState().token
+    if (!token) return
+    const apiBase = getApiBaseUrl()
+    try {
+      const res = await fetch(`${apiBase}/usage/high-mode-status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        set({ highModeQuota: data })
+      }
+    } catch {
+      // Non-critical
+    }
+  },
 
   fetchConversations: async () => {
     const token = useAuthStore.getState().token
     if (!token) {
-      // Guest mode: retain client mock conversations
       return
     }
 
     set({ isLoadingConversations: true, error: null })
     try {
-      const backendConvs = await fetchUserConversations(token)
+      const backendConvs = await fetchUserConversations(token, { include_archived: true })
       if (backendConvs.length > 0) {
         set({
           conversations: backendConvs,
-          activeConversationId: backendConvs[0].id,
           isLoadingConversations: false,
         })
-        // Fetch full message history for active conversation
-        const detail = await fetchConversationDetail(token, backendConvs[0].id)
+        const activeId = get().activeConversationId || backendConvs[0].id
+        const detail = await fetchConversationDetail(token, activeId)
         set((state) => ({
           conversations: state.conversations.map((c) => (c.id === detail.id ? detail : c)),
+          activeConversationId: activeId,
         }))
       } else {
         set({ conversations: [], activeConversationId: null, isLoadingConversations: false })
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load conversations from backend.'
+      const message = err instanceof Error ? err.message : 'Failed to load conversations.'
       set({ isLoadingConversations: false, error: message })
     }
   },
 
+  fetchTrashedConversationsStore: async () => {
+    const token = useAuthStore.getState().token
+    if (!token) return
+    try {
+      const trashed = await fetchTrashedConversations(token)
+      set({ trashedConversations: trashed })
+    } catch {
+      // Fallback
+    }
+  },
+
+  fetchFolders: async () => {
+    const token = useAuthStore.getState().token
+    if (!token) return
+    set({ isLoadingFolders: true })
+    try {
+      const userFolders = await fetchUserFolders(token)
+      set({ folders: userFolders, isLoadingFolders: false })
+    } catch {
+      set({ isLoadingFolders: false })
+    }
+  },
+
+  createFolder: async (name: string, color?: string) => {
+    const token = useAuthStore.getState().token
+    if (!token) return null
+    try {
+      const newFolder = await createFolderApi(token, { name, color })
+      set((state) => ({ folders: [...state.folders, newFolder] }))
+      return newFolder
+    } catch (err: any) {
+      throw err
+    }
+  },
+
+  updateFolder: async (folderId: string, updates: { name?: string; color?: string }) => {
+    const token = useAuthStore.getState().token
+    if (!token) return
+    try {
+      const updated = await updateFolderApi(token, folderId, updates)
+      set((state) => ({
+        folders: state.folders.map((f) => (f.id === folderId ? updated : f)),
+      }))
+    } catch (err: any) {
+      throw err
+    }
+  },
+
+  deleteFolder: async (folderId: string) => {
+    const token = useAuthStore.getState().token
+    if (!token) return
+    try {
+      await deleteFolderApi(token, folderId)
+      set((state) => ({
+        folders: state.folders.filter((f) => f.id !== folderId),
+        conversations: state.conversations.map((c) =>
+          c.folderId === folderId ? { ...c, folderId: null } : c
+        ),
+        selectedFolderId: state.selectedFolderId === folderId ? null : state.selectedFolderId,
+      }))
+    } catch (err: any) {
+      throw err
+    }
+  },
+
+  togglePinConversation: async (id: string) => {
+    const conv = get().conversations.find((c) => c.id === id)
+    if (!conv) return
+    const newPinned = !conv.pinned
+
+    // Optimistic UI update
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === id ? { ...c, pinned: newPinned } : c
+      ),
+    }))
+
+    const token = useAuthStore.getState().token
+    if (token) {
+      try {
+        await updateConversationApi(token, id, { is_pinned: newPinned })
+      } catch {
+        // Revert on error
+        set((state) => ({
+          conversations: state.conversations.map((c) =>
+            c.id === id ? { ...c, pinned: !newPinned } : c
+          ),
+        }))
+      }
+    }
+  },
+
+  toggleArchiveConversation: async (id: string) => {
+    const conv = get().conversations.find((c) => c.id === id)
+    if (!conv) return
+    const newArchived = !conv.isArchived
+
+    // Optimistic UI update
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === id ? { ...c, isArchived: newArchived } : c
+      ),
+    }))
+
+    const token = useAuthStore.getState().token
+    if (token) {
+      try {
+        await updateConversationApi(token, id, { is_archived: newArchived })
+      } catch {
+        // Revert on error
+        set((state) => ({
+          conversations: state.conversations.map((c) =>
+            c.id === id ? { ...c, isArchived: !newArchived } : c
+          ),
+        }))
+      }
+    }
+  },
+
+  moveConversationToFolder: async (id: string, folderId: string | null) => {
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === id ? { ...c, folderId } : c
+      ),
+    }))
+
+    const token = useAuthStore.getState().token
+    if (token) {
+      try {
+        await updateConversationApi(token, id, { folder_id: folderId })
+      } catch {
+        // Revert on error
+      }
+    }
+  },
+
+  trashConversation: async (id: string) => {
+    const conv = get().conversations.find((c) => c.id === id)
+    if (!conv) return
+
+    const token = useAuthStore.getState().token
+    if (token) {
+      try {
+        await trashConversationApi(token, id)
+      } catch {
+        // Fallback
+      }
+    }
+
+    const { conversations, activeConversationId, trashedConversations } = get()
+    const updatedActive = conversations.filter((c) => c.id !== id)
+    const trashedItem = { ...conv, deletedAt: new Date().toISOString() }
+
+    let nextActive = activeConversationId
+    if (activeConversationId === id) {
+      nextActive = updatedActive.length > 0 ? updatedActive[0].id : null
+    }
+
+    set({
+      conversations: updatedActive,
+      trashedConversations: [trashedItem, ...trashedConversations],
+      activeConversationId: nextActive,
+    })
+  },
+
+  restoreConversation: async (id: string) => {
+    const token = useAuthStore.getState().token
+    let restoredConv: Conversation | null = null
+
+    if (token) {
+      try {
+        restoredConv = await restoreConversationApi(token, id)
+      } catch {
+        // Fallback
+      }
+    }
+
+    const { trashedConversations, conversations } = get()
+    const item = trashedConversations.find((c) => c.id === id)
+    if (!item && !restoredConv) return
+
+    const restored = restoredConv || { ...item!, deletedAt: null }
+    set({
+      trashedConversations: trashedConversations.filter((c) => c.id !== id),
+      conversations: [restored, ...conversations],
+      activeConversationId: restored.id,
+    })
+  },
+
+  purgeConversation: async (id: string) => {
+    const token = useAuthStore.getState().token
+    if (token) {
+      try {
+        await purgeConversationApi(token, id)
+      } catch {
+        // Fallback
+      }
+    }
+
+    set((state) => ({
+      trashedConversations: state.trashedConversations.filter((c) => c.id !== id),
+    }))
+  },
+
+  setActiveView: (view: WorkspaceView) => set({ activeView: view, selectedFolderId: null }),
+  setSelectedFolderId: (folderId: string | null) => set({ selectedFolderId: folderId }),
+
   createNewChat: () => {
+
     if (activeAbortController) {
       activeAbortController.abort()
       activeAbortController = null
@@ -162,9 +470,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setSearchQuery: (q: string) => set({ searchQuery: q }),
   setSelectedModel: (modelId: string) => set({ selectedModelId: modelId }),
-  toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
-  setSidebarCollapsed: (collapsed: boolean) => set({ isSidebarCollapsed: collapsed }),
-  setMobileSidebarOpen: (open: boolean) => set({ isMobileSidebarOpen: open }),
 
   sendMessage: async (content: string) => {
     const trimmed = content.trim()
@@ -247,7 +552,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (token) {
       activeAbortController = new AbortController()
       let accumulatedText = ''
-      let realBackendConvId = currentConvId.startsWith('conv-') ? undefined : currentConvId
+      const realBackendConvId = currentConvId.startsWith('conv-') ? undefined : currentConvId
 
       try {
         await streamChatCompletion(
@@ -256,6 +561,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             conversation_id: realBackendConvId,
             content: trimmed,
             model: selectedModelId,
+            mode: get().selectedMode || 'standard',
           },
           (event, data) => {
             if (event === 'message_start') {
@@ -301,6 +607,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 }),
               }))
             } else if (event === 'message_end') {
+              if (get().selectedMode === 'high') {
+                get().fetchHighModeQuota()
+              }
               set((state) => ({
                 isStreaming: false,
                 conversations: state.conversations.map((c) => {
@@ -323,6 +632,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 }),
               }))
             } else if (event === 'error') {
+              if (get().selectedMode === 'high') {
+                get().fetchHighModeQuota()
+              }
               set((state) => ({
                 isStreaming: false,
                 conversations: state.conversations.map((c) => {
@@ -488,4 +800,61 @@ export const useChatStore = create<ChatState>((set, get) => ({
       ),
     }))
   },
+
+  selectBranch: async (conversationId: string, messageId: string) => {
+    const token = useAuthStore.getState().token
+    if (!token) return
+    try {
+      const res = await selectBranchApi(token, conversationId, messageId)
+      set((state) => ({
+        conversations: state.conversations.map((c) =>
+          c.id === conversationId
+            ? { ...c, activeLeafMessageId: res.activeLeafMessageId, messages: res.messages }
+            : c
+        ),
+      }))
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to switch branch.'
+      set({ error: message })
+    }
+  },
+
+  editUserMessageBranch: async (messageId: string, content: string) => {
+    const token = useAuthStore.getState().token
+    const { activeConversationId } = get()
+    if (!token || !activeConversationId) return
+    try {
+      const res = await editMessageApi(token, messageId, content)
+      set((state) => ({
+        conversations: state.conversations.map((c) =>
+          c.id === activeConversationId
+            ? { ...c, activeLeafMessageId: res.activeLeafMessageId, messages: res.messages }
+            : c
+        ),
+      }))
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to edit message branch.'
+      set({ error: message })
+    }
+  },
+
+  regenerateAssistantMessageBranch: async (messageId: string) => {
+    const token = useAuthStore.getState().token
+    const { activeConversationId } = get()
+    if (!token || !activeConversationId) return
+    try {
+      const res = await regenerateMessageApi(token, messageId)
+      set((state) => ({
+        conversations: state.conversations.map((c) =>
+          c.id === activeConversationId
+            ? { ...c, activeLeafMessageId: res.activeLeafMessageId, messages: res.messages }
+            : c
+        ),
+      }))
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to regenerate response.'
+      set({ error: message })
+    }
+  },
 }))
+

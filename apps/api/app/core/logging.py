@@ -10,20 +10,38 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.config import settings
 
 
+import json
+
+
+class JSONLogFormatter(logging.Formatter):
+    """Structured JSON formatter for cloud log aggregators (CloudWatch, Datadog, Loki)."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_obj = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            log_obj["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_obj)
+
+
 def setup_logging() -> logging.Logger:
     """Configure structured logging for the application."""
     log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
+    handler = logging.StreamHandler(sys.stdout)
 
-    log_format = (
-        "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
-    )
+    if getattr(settings, "LOG_FORMAT", "").lower() == "json":
+        handler.setFormatter(JSONLogFormatter())
+    else:
+        log_format = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+        handler.setFormatter(logging.Formatter(log_format))
 
-    logging.basicConfig(
-        level=log_level,
-        format=log_format,
-        handlers=[logging.StreamHandler(sys.stdout)],
-        force=True,
-    )
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+    root_logger.handlers = [handler]
 
     logger = logging.getLogger("nexaai")
     logger.setLevel(log_level)

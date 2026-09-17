@@ -42,6 +42,7 @@ apps/api/alembic/versions/*.pyc
 # Uploads / generated files
 uploads/
 temp/
+scratch/
 *.tmp
 *.db
 *.sqlite

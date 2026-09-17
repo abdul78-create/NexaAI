@@ -185,6 +185,10 @@ class ShareService:
         if not conv:
             return None, "not_found"
 
+        if conv.deleted_at is not None:
+            return None, "trashed"
+
+
         # Build public messages list with safe attachments
         shared_messages: List[SharedMessageItem] = []
         for msg in conv.messages:

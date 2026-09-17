@@ -62,3 +62,19 @@ async def check_db_connectivity() -> bool:
     except Exception as exc:
         logger.warning(f"Database readiness check failed: {exc}")
         return False
+
+
+async def check_redis_connectivity() -> bool:
+    """Safely check if Redis is reachable and responding to PING."""
+    if not settings.REDIS_URL:
+        return True
+    try:
+        import redis.asyncio as redis
+        r = redis.from_url(settings.REDIS_URL, socket_timeout=2.0)
+        await r.ping()
+        await r.aclose()
+        return True
+    except Exception as exc:
+        logger.warning(f"Redis readiness check failed: {exc}")
+        return False
+

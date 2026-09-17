@@ -9,9 +9,22 @@ export interface Message {
   status?: 'sending' | 'streaming' | 'done' | 'error'
   tokens?: number
   error?: string
+  parentMessageId?: string | null
+  siblingIndex?: number
+  siblingCount?: number
+  siblingIds?: string[]
 }
 
 export type ConversationGroup = 'Today' | 'Yesterday' | 'Previous 7 Days'
+
+export interface Folder {
+  id: string
+  userId: string
+  name: string
+  color: string
+  createdAt: string
+  updatedAt: string
+}
 
 export interface Conversation {
   id: string
@@ -22,7 +35,12 @@ export interface Conversation {
   messages: Message[]
   group: ConversationGroup
   pinned?: boolean
+  isArchived?: boolean
+  folderId?: string | null
+  deletedAt?: string | null
+  activeLeafMessageId?: string | null
 }
+
 
 export interface AiModel {
   id: string

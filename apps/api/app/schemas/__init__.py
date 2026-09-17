@@ -20,6 +20,8 @@ from app.schemas.user import (
     UserUsageSummary,
 )
 
+from app.schemas.folder import FolderCreate, FolderResponse, FolderUpdate
+
 __all__ = [
     "ErrorDetail",
     "ErrorResponse",
@@ -34,4 +36,8 @@ __all__ = [
     "TokenResponse",
     "RefreshTokenRequest",
     "AuthMessageResponse",
+    "FolderCreate",
+    "FolderUpdate",
+    "FolderResponse",
 ]
+

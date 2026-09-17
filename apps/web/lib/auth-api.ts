@@ -4,8 +4,9 @@
  */
 
 import { AuthTokens, LoginPayload, RegisterPayload, User } from '@/types/auth'
+import { getApiBaseUrl } from './api-config'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+const API_BASE = getApiBaseUrl()
 
 interface BackendUser {
   id: string
@@ -15,6 +16,8 @@ interface BackendUser {
   is_active: boolean
   is_verified: boolean
   created_at: string
+  has_password?: boolean
+  oauth_providers?: string[]
   usage?: {
     total_tokens: number
     conversations: number
@@ -38,6 +41,8 @@ function mapBackendUser(bUser: BackendUser): User {
     isActive: bUser.is_active,
     isVerified: bUser.is_verified,
     createdAt: bUser.created_at,
+    hasPassword: bUser.has_password,
+    oauthProviders: bUser.oauth_providers || [],
     usage: bUser.usage
       ? {
           totalTokens: bUser.usage.total_tokens,

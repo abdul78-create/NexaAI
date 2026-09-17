@@ -63,29 +63,29 @@ export const SettingsWorkspace: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-slate-900/80 backdrop-blur border border-slate-800 rounded-3xl shadow-xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-card text-card-foreground border border-border rounded-3xl shadow-sm">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Settings className="w-6 h-6 text-indigo-400" />
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-foreground">
+            <Settings className="w-6 h-6 text-indigo-500" />
             Account Settings Studio
           </h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted-foreground">
             Manage your personal profile, theme preferences, default AI models, and privacy controls.
           </p>
         </div>
       </div>
 
       {error && (
-        <div className="flex items-start gap-3 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm rounded-2xl">
-          <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 p-4 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-2xl">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div>{error}</div>
         </div>
       )}
 
       {isLoading ? (
-        <div className="p-16 flex flex-col items-center justify-center bg-slate-900/40 border border-slate-800 rounded-3xl space-y-3">
-          <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-          <p className="text-sm font-medium text-slate-400">Loading user settings...</p>
+        <div className="p-16 flex flex-col items-center justify-center bg-card border border-border rounded-3xl space-y-3">
+          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+          <p className="text-sm font-medium text-muted-foreground">Loading user settings...</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -102,8 +102,8 @@ export const SettingsWorkspace: React.FC = () => {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition-all ${
                     isSelected
-                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                      : 'bg-slate-900/40 hover:bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800/60'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-card hover:bg-muted text-muted-foreground hover:text-foreground border border-border'
                   }`}
                 >
                   <Icon className="w-4 h-4" />

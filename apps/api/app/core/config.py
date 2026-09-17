@@ -36,6 +36,21 @@ class Settings(BaseSettings):
     COOKIE_SAMESITE: str = "lax"
     COOKIE_DOMAIN: Optional[str] = None
 
+    # OAuth Settings (Task 2)
+    AUTH_FRONTEND_URL: str = "http://localhost:3000"
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
+    GOOGLE_REDIRECT_URI: Optional[str] = None
+    GITHUB_CLIENT_ID: Optional[str] = None
+    GITHUB_CLIENT_SECRET: Optional[str] = None
+    GITHUB_REDIRECT_URI: Optional[str] = None
+
+    # Chat Modes (Task 4)
+    CHAT_MODE_LOW_MODEL: str = "gpt-4o-mini"
+    CHAT_MODE_STANDARD_MODEL: str = "gpt-4o-mini"
+    CHAT_MODE_HIGH_MODEL: str = "gpt-4o"
+    CHAT_MODE_HIGH_DAILY_LIMIT: int = 5
+
     # CORS
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
@@ -45,10 +60,19 @@ class Settings(BaseSettings):
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",") if i.strip()]
-        elif isinstance(v, (list, str)):
-            return v
+        if isinstance(v, str):
+            v_str = v.strip()
+            if v_str.startswith("[") and v_str.endswith("]"):
+                import json
+                try:
+                    parsed = json.loads(v_str)
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if str(item).strip()]
+                except Exception:
+                    pass
+            return [i.strip() for i in v_str.split(",") if i.strip()]
+        elif isinstance(v, list):
+            return [str(i).strip() for i in v if str(i).strip()]
         raise ValueError(f"Invalid CORS origins format: {v}")
 
     # Database

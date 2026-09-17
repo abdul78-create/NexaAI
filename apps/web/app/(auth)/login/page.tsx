@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Lock, Mail, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, Compass } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
+import { OAuthButtons } from '@/components/auth/OAuthButtons'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -132,8 +133,13 @@ export default function LoginPage() {
             <div className="w-full border-t border-border/60" />
           </div>
           <span className="relative px-3 bg-card text-xs text-muted-foreground font-medium">
-            OR
+            OR CONTINUE WITH
           </span>
+        </div>
+
+        {/* Third-Party OAuth Providers */}
+        <div className="mb-4">
+          <OAuthButtons />
         </div>
 
         {/* Guest Access Alternative */}

@@ -17,6 +17,7 @@ interface AuthStore {
   register: (payload: RegisterPayload) => Promise<boolean>
   logout: () => Promise<void>
   checkAuth: () => Promise<void>
+  setSession: (accessToken: string) => Promise<void>
   clearError: () => void
 }
 
@@ -116,6 +117,22 @@ export const useAuthStore = create<AuthStore>()(
           } catch {
             set({ user: null, token: null, isAuthenticated: false })
           }
+        }
+      },
+
+      setSession: async (accessToken: string) => {
+        set({ isLoading: true, error: null })
+        try {
+          const freshUser = await fetchCurrentUser(accessToken)
+          set({
+            token: accessToken,
+            user: freshUser,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          })
+        } catch {
+          await get().checkAuth()
         }
       },
 

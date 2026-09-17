@@ -1,5 +1,6 @@
 """Automated test suite for AI Providers, Chat SSE Streaming, and Ownership Isolation."""
 
+import asyncio
 import pytest
 from httpx import AsyncClient
 
@@ -161,15 +162,19 @@ async def test_stream_chat_sse_endpoint(client: AsyncClient):
     token = await _get_user_token(client, "stream_user@example.com", "Stream User")
     headers = {"Authorization": f"Bearer {token}"}
 
-    stream_res = await client.post(
+    async with client.stream(
+        "POST",
         "/api/v1/chat/stream",
         headers=headers,
         json={"content": "Explain async Python programming", "model": "nexa-standard"},
-    )
-    assert stream_res.status_code == 200
-    assert "text/event-stream" in stream_res.headers.get("content-type", "")
+    ) as stream_res:
+        assert stream_res.status_code == 200
+        assert "text/event-stream" in stream_res.headers.get("content-type", "")
+        body_bytes = await stream_res.aread()
+        body_text = body_bytes.decode("utf-8")
 
-    body_text = stream_res.text
+    await asyncio.sleep(0.1)
+
     assert "event: message_start" in body_text
     assert "event: token" in body_text
     assert "event: usage" in body_text

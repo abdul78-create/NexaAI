@@ -17,5 +17,8 @@ aiosqlite>=0.20.0
 openai>=1.50.0
 python-multipart>=0.0.12
 opencv-python-headless>=4.10.0.84
-Pillow>=11.0.0
+pillow>=10.0.0
+redis>=5.0.0
+
+
 

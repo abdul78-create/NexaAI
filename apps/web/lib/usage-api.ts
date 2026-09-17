@@ -3,8 +3,9 @@
  */
 
 import { useAuthStore } from '@/stores/auth-store'
+import { getApiBaseUrl } from './api-config'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+const API_BASE = getApiBaseUrl()
 
 export interface UsageSummaryResponse {
   period: string
@@ -74,6 +75,14 @@ export interface QuotaSummaryResponse {
   resets_at: string
 }
 
+export interface HighModeStatusResponse {
+  mode: string
+  used_today: number
+  daily_limit: number
+  remaining_today: number
+  resets_at: string
+}
+
 function getAuthHeaders(): Record<string, string> {
   const token = useAuthStore.getState().token
   return token ? { Authorization: `Bearer ${token}` } : {}
@@ -116,6 +125,14 @@ export async function getUserQuotas(): Promise<QuotaSummaryResponse> {
     headers: getAuthHeaders(),
   })
   if (!res.ok) throw new Error('Failed to fetch quota details')
+  return res.json()
+}
+
+export async function getHighModeStatus(): Promise<HighModeStatusResponse> {
+  const res = await fetch(`${API_BASE}/usage/high-mode-status`, {
+    headers: getAuthHeaders(),
+  })
+  if (!res.ok) throw new Error('Failed to fetch high-mode status')
   return res.json()
 }
 

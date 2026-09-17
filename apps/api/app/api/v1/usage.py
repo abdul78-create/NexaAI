@@ -14,6 +14,7 @@ from app.schemas.usage import (
     UsageHistoryItem,
     UsageHistoryList,
     QuotaSummaryResponse,
+    HighModeStatusResponse,
 )
 from app.services.usage.aggregation import UsageAggregationService
 from app.services.usage.quotas import QuotaService
@@ -105,6 +106,23 @@ async def get_user_quotas(
     quota_service = QuotaService(db)
     quota_data = await quota_service.get_user_quota_summary(current_user.id)
     return QuotaSummaryResponse.model_validate(quota_data)
+
+
+@router.get(
+    "/high-mode-status",
+    response_model=HighModeStatusResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get daily High-mode usage quota status",
+)
+async def get_high_mode_status(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+) -> HighModeStatusResponse:
+    """Retrieve current daily limit, used count, remaining requests, and reset timestamp for High mode."""
+    quota_service = QuotaService(db)
+    high_mode_data = await quota_service.get_high_mode_usage(current_user.id)
+    return HighModeStatusResponse.model_validate(high_mode_data)
+
 
 
 @router.get(

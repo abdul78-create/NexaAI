@@ -1,18 +1,21 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { motion } from 'motion/react'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Loader2 } from 'lucide-react'
 import { Message } from '@/types/chat'
 import { MessageRenderer } from '@/components/chat/MessageRenderer'
 import { MessageActions } from '@/components/chat/MessageActions'
+import { Button } from '@/components/ui/button'
 import { timeAgo, cn } from '@/lib/utils'
 
 interface MessageBubbleProps {
   message: Message
   isLastAssistantMessage?: boolean
   isStreaming?: boolean
-  onRegenerate?: () => void
+  onRegenerate?: (messageId: string) => void
+  onEdit?: (messageId: string, newContent: string) => Promise<void> | void
+  onSelectBranch?: (targetMessageId: string) => void
 }
 
 export function MessageBubble({
@@ -20,9 +23,46 @@ export function MessageBubble({
   isLastAssistantMessage,
   isStreaming,
   onRegenerate,
+  onEdit,
+  onSelectBranch,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user'
   const isCurrentlyStreaming = message.status === 'streaming'
+  const [isEditing, setIsEditing] = useState(false)
+  const [editContent, setEditContent] = useState(message.content)
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+
+  const handleStartEdit = () => {
+    setEditContent(message.content)
+    setEditError(null)
+    setIsEditing(true)
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+    setEditContent(message.content)
+    setEditError(null)
+  }
+
+  const handleSaveEdit = async () => {
+    const trimmed = editContent.trim()
+    if (!trimmed || trimmed === message.content || !onEdit) {
+      setIsEditing(false)
+      return
+    }
+
+    setIsSavingEdit(true)
+    setEditError(null)
+    try {
+      await onEdit(message.id, trimmed)
+      setIsEditing(false)
+    } catch (err: unknown) {
+      setEditError(err instanceof Error ? err.message : 'Failed to save edits')
+    } finally {
+      setIsSavingEdit(false)
+    }
+  }
 
   return (
     <motion.div
@@ -69,7 +109,46 @@ export function MessageBubble({
           {/* Body */}
           <div className="text-foreground">
             {isUser ? (
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+              isEditing ? (
+                <div className="space-y-2 mt-1">
+                  <textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    rows={3}
+                    className="w-full rounded-lg border border-white/15 bg-muted/40 p-3 text-sm text-foreground focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand resize-y"
+                    disabled={isSavingEdit}
+                  />
+                  {editError && <p className="text-xs text-destructive">{editError}</p>}
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCancelEdit}
+                      disabled={isSavingEdit}
+                      className="h-8 text-xs"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveEdit}
+                      disabled={isSavingEdit || !editContent.trim()}
+                      className="h-8 text-xs gradient-brand text-white"
+                    >
+                      {isSavingEdit ? (
+                        <>
+                          <Loader2 className="mr-1.5 size-3 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        'Save & Submit'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+              )
             ) : (
               <div>
                 {message.content ? (
@@ -91,13 +170,18 @@ export function MessageBubble({
           </div>
 
           {/* Action Toolbar */}
-          {!isCurrentlyStreaming && (
+          {!isCurrentlyStreaming && !isEditing && (
             <MessageActions
               content={message.content}
               role={message.role}
               isLastAssistantMessage={isLastAssistantMessage}
               isStreaming={isStreaming}
-              onRegenerate={onRegenerate}
+              onRegenerate={onRegenerate ? () => onRegenerate(message.id) : undefined}
+              onEdit={isUser ? handleStartEdit : undefined}
+              siblingIndex={message.siblingIndex}
+              siblingCount={message.siblingCount}
+              siblingIds={message.siblingIds}
+              onSelectBranch={onSelectBranch}
               tokens={message.tokens}
               className="pt-1 opacity-0 group-hover:opacity-100 transition-opacity focus-within:opacity-100"
             />
@@ -107,3 +191,4 @@ export function MessageBubble({
     </motion.div>
   )
 }
+

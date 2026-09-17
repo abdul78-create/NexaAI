@@ -3,8 +3,9 @@
  */
 
 import { useAuthStore } from '@/stores/auth-store'
+import { getApiBaseUrl } from './api-config'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+const API_BASE = getApiBaseUrl()
 
 export interface SpeechTranscriptionResponse {
   id: string
@@ -20,7 +21,7 @@ export interface SpeechTranscriptionResponse {
   created_at: string
 }
 
-export interface SpeechHistoryItem extends SpeechTranscriptionResponse {}
+export type SpeechHistoryItem = SpeechTranscriptionResponse
 
 export interface SpeechHistoryList {
   items: SpeechHistoryItem[]

@@ -2,10 +2,11 @@
 
 from fastapi import APIRouter, Query, status
 from app.core.config import settings
-from app.db.session import check_db_connectivity
+from app.db.session import check_db_connectivity, check_redis_connectivity
 from app.schemas.common import HealthResponse
 
 router = APIRouter(tags=["Health"])
+
 
 
 @router.get(
@@ -67,10 +68,12 @@ async def get_liveness() -> HealthResponse:
 )
 @router.get("/health/ready", include_in_schema=False)
 async def get_readiness() -> HealthResponse:
-    """Readiness probe checking database connectivity."""
+    """Readiness probe checking database and redis connectivity."""
     is_db_up = await check_db_connectivity()
+    is_redis_up = await check_redis_connectivity()
     db_status = "connected" if is_db_up else "unreachable"
-    overall_status = "healthy" if is_db_up else "degraded"
+    redis_status = "connected" if is_redis_up else "unreachable"
+    overall_status = "healthy" if (is_db_up and is_redis_up) else "degraded"
 
     return HealthResponse(
         status=overall_status,
@@ -78,4 +81,5 @@ async def get_readiness() -> HealthResponse:
         version=settings.APP_VERSION,
         environment=settings.APP_ENV,
         database=db_status,
+        redis=redis_status,
     )

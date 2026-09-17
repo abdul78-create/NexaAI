@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Copy, Download, MessageSquare, Check, Edit3, Save } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useChatStore } from '@/stores/chat-store'
 
 interface TranscriptEditorProps {
   initialTranscript: string
@@ -51,24 +52,19 @@ export const TranscriptEditor: React.FC<TranscriptEditorProps> = ({
   }
 
   const handleInsertIntoChat = () => {
-    // Store in localStorage or session state for chat composer pickup
-    try {
-      sessionStorage.setItem('nexaai_pending_chat_input', transcript)
-      router.push('/app')
-    } catch (e) {
-      console.error('Failed to stage transcript for chat', e)
-    }
+    useChatStore.getState().setDraftInput(transcript)
+    router.push('/app')
   }
 
   const wordCount = transcript.trim() ? transcript.trim().split(/\s+/).length : 0
   const charCount = transcript.length
 
   return (
-    <div className="w-full bg-slate-900/60 backdrop-blur border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+    <div className="w-full bg-card text-card-foreground border border-border rounded-2xl p-5 shadow-sm space-y-4">
       {/* Header controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
-        <div className="flex items-center gap-3 text-xs text-slate-400">
-          <span>Language: <strong className="text-slate-200 uppercase">{language}</strong></span>
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span>Language: <strong className="text-foreground uppercase">{language}</strong></span>
           <span>•</span>
           <span>{wordCount} words ({charCount} chars)</span>
           {audioDurationSeconds && (
@@ -93,7 +89,7 @@ export const TranscriptEditor: React.FC<TranscriptEditorProps> = ({
                 setIsEditing(false)
                 if (onTranscriptChange) onTranscriptChange(transcript)
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs font-medium rounded-lg hover:bg-emerald-600/30 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-medium rounded-lg hover:bg-emerald-500/20 transition-all"
             >
               <Save className="w-3.5 h-3.5" />
               Save Edit
@@ -102,7 +98,7 @@ export const TranscriptEditor: React.FC<TranscriptEditorProps> = ({
             <button
               type="button"
               onClick={() => setIsEditing(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-slate-300 hover:text-white text-xs font-medium rounded-lg transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-foreground hover:bg-secondary/80 text-xs font-medium rounded-lg border border-border transition-all"
             >
               <Edit3 className="w-3.5 h-3.5" />
               Edit Text
@@ -112,17 +108,17 @@ export const TranscriptEditor: React.FC<TranscriptEditorProps> = ({
           <button
             type="button"
             onClick={handleCopy}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-slate-300 hover:text-white text-xs font-medium rounded-lg transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-foreground hover:bg-secondary/80 text-xs font-medium rounded-lg border border-border transition-all"
             title="Copy to clipboard"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
             {copied ? 'Copied' : 'Copy'}
           </button>
 
           <button
             type="button"
             onClick={handleDownload}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-slate-300 hover:text-white text-xs font-medium rounded-lg transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-foreground hover:bg-secondary/80 text-xs font-medium rounded-lg border border-border transition-all"
             title="Download .txt"
           >
             <Download className="w-3.5 h-3.5" />
@@ -132,7 +128,7 @@ export const TranscriptEditor: React.FC<TranscriptEditorProps> = ({
           <button
             type="button"
             onClick={handleInsertIntoChat}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg shadow-md shadow-indigo-600/20 transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-medium rounded-lg shadow-sm transition-all"
           >
             <MessageSquare className="w-3.5 h-3.5" />
             Insert into Chat
@@ -146,11 +142,11 @@ export const TranscriptEditor: React.FC<TranscriptEditorProps> = ({
           value={transcript}
           onChange={(e) => setTranscript(e.target.value)}
           rows={8}
-          className="w-full p-4 bg-slate-950 border border-indigo-500/40 focus:border-indigo-500 text-slate-100 text-sm font-sans rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500/50 leading-relaxed resize-y"
+          className="w-full p-4 bg-background border border-indigo-500/40 focus:border-indigo-500 text-foreground text-sm font-sans rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500/50 leading-relaxed resize-y"
           placeholder="Edit transcript here..."
         />
       ) : (
-        <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-800/80 text-slate-200 text-sm font-sans leading-relaxed whitespace-pre-wrap select-text min-h-[120px]">
+        <div className="p-4 bg-muted/40 rounded-xl border border-border text-foreground text-sm font-sans leading-relaxed whitespace-pre-wrap select-text min-h-[120px]">
           {transcript}
         </div>
       )}

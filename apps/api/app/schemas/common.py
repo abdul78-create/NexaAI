@@ -14,6 +14,9 @@ class HealthResponse(BaseModel):
     database: Optional[str] = Field(
         None, description="Database connection readiness (connected / unreachable / skipped)"
     )
+    redis: Optional[str] = Field(
+        None, description="Redis connection readiness (connected / unreachable / skipped)"
+    )
 
 
 class ErrorDetail(BaseModel):

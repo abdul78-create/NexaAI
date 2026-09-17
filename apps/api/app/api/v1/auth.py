@@ -162,6 +162,8 @@ async def get_current_user_profile(
         is_active=current_user.is_active,
         is_verified=current_user.is_verified,
         created_at=current_user.created_at,
+        has_password=current_user.has_password,
+        oauth_providers=current_user.oauth_providers,
         usage=UserUsageSummary(
             total_tokens=0,
             conversations=0,

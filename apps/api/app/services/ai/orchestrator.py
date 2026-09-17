@@ -16,11 +16,13 @@ from app.db.models.chat_message_attachment import ChatMessageAttachment
 from app.services.ai.base import ChatMessagePayload
 from app.services.ai.capabilities import get_model_capabilities
 from app.services.ai.factory import get_ai_provider
+from app.services.ai.mode_router import ChatMode, normalize_chat_mode, resolve_model_for_mode
 from app.services.attachments.service import AttachmentService
 from app.services.chat_service import (
     get_user_conversation,
     create_user_conversation,
     add_chat_message,
+    compute_active_path_messages,
 )
 from app.services.images.ocr import MockOCRProvider, TesseractOCRProvider
 from app.services.speech.service import SpeechService
@@ -154,6 +156,7 @@ class MultimodalAIOrchestrator:
         model_id: str,
         attachment_inputs: Optional[List[Dict[str, Any]]] = None,
         options: Optional[Dict[str, Any]] = None,
+        mode: Optional[str] = "standard",
     ) -> AsyncIterator[str]:
         """
         Validate quota, assemble multimodal context, stream completion SSE frames,
@@ -163,6 +166,7 @@ class MultimodalAIOrchestrator:
             return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
         start_time = time.time()
+        canonical_mode = normalize_chat_mode(mode)
 
         # 1. Check daily user quotas
         try:
@@ -173,6 +177,22 @@ class MultimodalAIOrchestrator:
                 err_msg = err_msg.get("error", {}).get("message", str(err_msg))
             yield format_sse("error", {"code": "QUOTA_EXCEEDED", "message": str(err_msg)})
             return
+
+        # 1b. Check High-mode quota if requested
+        if canonical_mode == ChatMode.HIGH:
+            try:
+                await self.quota_service.check_high_mode_quota(user_id=user_id)
+            except Exception as exc:
+                err_msg = getattr(exc, "detail", str(exc))
+                if isinstance(err_msg, dict):
+                    err_msg = err_msg.get("error", {}).get("message", str(err_msg))
+                yield format_sse("error", {"code": "HIGH_MODE_QUOTA_EXCEEDED", "message": str(err_msg)})
+                return
+
+        # Resolve effective model architecture based on chat mode
+        effective_model = resolve_model_for_mode(canonical_mode)
+        if model_id and model_id not in ("nexa-standard", "nexa-fast", "default", ""):
+            effective_model = model_id
 
         # 2. Resolve or Create Conversation
         if conversation_id:
@@ -191,7 +211,7 @@ class MultimodalAIOrchestrator:
                 db=self.db,
                 user_id=user_id,
                 title=auto_title,
-                model=model_id,
+                model=effective_model,
             )
 
         # 3. Process & Enrich Attachments
@@ -199,7 +219,7 @@ class MultimodalAIOrchestrator:
             attachments, context_header = await self._process_attachments(
                 user_id=user_id,
                 attachment_inputs=attachment_inputs or [],
-                model_id=model_id,
+                model_id=effective_model,
                 user_prompt=user_prompt,
             )
         except MultimodalOrchestrationError as exc:
@@ -215,11 +235,15 @@ class MultimodalAIOrchestrator:
         user_msg = await add_chat_message(
             db=self.db,
             conversation_id=conv.id,
+            parent_message_id=conv.active_leaf_message_id,
             role="user",
             content=final_prompt_text,
-            model=model_id,
+            model=effective_model,
             input_tokens=max(1, len(final_prompt_text) // 4),
         )
+        user_msg_id = user_msg.id
+        conv.active_leaf_message_id = user_msg_id
+        await self.db.commit()
 
         # Link attachments to user message
         for idx, att in enumerate(attachments):
@@ -236,8 +260,12 @@ class MultimodalAIOrchestrator:
         history_conv = await get_user_conversation(self.db, conv.id, user_id)
         msg_history: List[ChatMessagePayload] = []
         if history_conv:
-            for m in history_conv.messages:
-                msg_history.append(ChatMessagePayload(role=m.role, content=m.content))
+            active_msgs = compute_active_path_messages(history_conv)
+            for m in active_msgs:
+                msg_history.append(ChatMessagePayload(role=m["role"], content=m["content"]))
+
+        if not msg_history:
+            msg_history = [ChatMessagePayload(role="user", content=final_prompt_text)]
 
         assistant_msg_id = uuid.uuid4()
         yield format_sse(
@@ -245,7 +273,8 @@ class MultimodalAIOrchestrator:
             {
                 "conversation_id": str(conv.id),
                 "message_id": str(assistant_msg_id),
-                "model": model_id,
+                "model": effective_model,
+                "mode": canonical_mode.value,
             }
         )
 
@@ -256,7 +285,7 @@ class MultimodalAIOrchestrator:
         stream_successful = False
 
         try:
-            async for event in provider.stream(messages=msg_history, model=model_id):
+            async for event in provider.stream(messages=msg_history, model=effective_model):
                 if event.event == "token":
                     token_text = event.data.get("text", "")
                     accumulated_text += token_text
@@ -287,16 +316,21 @@ class MultimodalAIOrchestrator:
 
         # 7. Persist Assistant ChatMessage & Telemetry
         if stream_successful and accumulated_text:
+            conv_id = conv.id
             assistant_msg = ChatMessage(
                 id=assistant_msg_id,
-                conversation_id=conv.id,
+                conversation_id=conv_id,
+                parent_message_id=user_msg_id,
                 role="assistant",
                 content=accumulated_text,
-                model=model_id,
+                model=effective_model,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens or max(1, len(accumulated_text) // 4),
             )
             self.db.add(assistant_msg)
+            await self.db.commit()
+
+            conv.active_leaf_message_id = assistant_msg_id
             await self.db.commit()
 
             duration_ms = int((time.time() - start_time) * 1000)
@@ -305,11 +339,15 @@ class MultimodalAIOrchestrator:
                     user_id=user_id,
                     feature_type="chat",
                     provider=getattr(provider, "provider_name", "openai"),
-                    model_name=model_id,
+                    model_name=effective_model,
                     prompt_tokens=input_tokens,
                     completion_tokens=output_tokens,
                     execution_duration_ms=duration_ms,
                     status="success",
+                    mode=canonical_mode.value,
+                    conversation_id=conv_id,
+                    message_id=assistant_msg_id,
                 )
-            except Exception:
-                pass
+            except Exception as exc:
+                import logging
+                logging.getLogger("nexaai").error(f"Failed to log usage telemetry: {exc}", exc_info=True)

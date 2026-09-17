@@ -21,6 +21,8 @@ import {
   LogIn,
   LogOut,
   Search,
+  Archive,
+  Trash2,
 } from 'lucide-react'
 import { useChat } from '@/hooks/useChat'
 import { useAuthStore } from '@/stores/auth-store'
@@ -57,17 +59,45 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
   const pathname = usePathname()
   const {
     groupedConversations,
+    pinnedConversations,
+    folders,
+    trashedConversations,
+    conversations,
     activeConversationId,
+    activeView,
+    selectedFolderId,
     searchQuery,
     setSearchQuery,
     createNewChat,
     selectConversation,
     deleteConversation,
     renameConversation,
+    togglePinConversation,
+    toggleArchiveConversation,
+    moveConversationToFolder,
+    trashConversation,
+    restoreConversation,
+    purgeConversation,
+    createFolder,
+    updateFolder,
+    deleteFolder,
+    setActiveView,
+    setSelectedFolderId,
+    fetchConversations,
+    fetchFolders,
+    fetchTrashedConversationsStore,
     isSidebarCollapsed,
     toggleSidebar,
   } = useChat()
   const { user, isAuthenticated, logout } = useAuthStore()
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      fetchConversations()
+      fetchFolders()
+      fetchTrashedConversationsStore()
+    }
+  }, [isAuthenticated, fetchConversations, fetchFolders, fetchTrashedConversationsStore])
 
   const handleSelectConversation = (id: string) => {
     selectConversation(id)
@@ -75,9 +105,13 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
   }
 
   const handleCreateNewChat = () => {
+    setActiveView('all')
     createNewChat()
     if (isMobile) onClose?.()
   }
+
+  const archivedCount = conversations.filter((c) => c.isArchived && !c.deletedAt).length
+  const trashCount = trashedConversations.length
 
   return (
     <motion.aside
@@ -85,50 +119,69 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
       animate={{ width: isMobile ? '100%' : isSidebarCollapsed ? 64 : 260 }}
       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
       className={cn(
-        'relative flex flex-col border-r border-white/6 bg-sidebar h-full flex-shrink-0 overflow-hidden select-none',
+        'relative flex flex-col border-r border-border/40 bg-sidebar h-full flex-shrink-0 overflow-hidden select-none',
         isMobile ? 'w-full border-r-0' : ''
       )}
     >
       {/* Brand Header */}
       <div
         className={cn(
-          'flex h-14 flex-shrink-0 items-center border-b border-white/6 px-3',
+          'flex h-14 flex-shrink-0 items-center border-b border-border/40 px-3',
           !isMobile && isSidebarCollapsed ? 'justify-center' : 'justify-between px-3.5'
         )}
       >
-        <Link href="/" className="flex items-center gap-2.5 min-w-0 group">
-          <div className="size-7 flex-shrink-0 rounded-lg gradient-brand flex items-center justify-center shadow-md group-hover:glow-brand-sm transition-all">
-            <Sparkles className="size-3.5 text-white" />
-          </div>
-          {(isMobile || !isSidebarCollapsed) && (
-            <span className="font-semibold text-sm tracking-tight whitespace-nowrap">
-              Nexa<span className="gradient-text">AI</span>
-            </span>
-          )}
-        </Link>
-
-        {isMobile ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/5"
-            aria-label="Close navigation drawer"
-          >
-            <X className="size-4" />
-          </Button>
+        {!isMobile && isSidebarCollapsed ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleSidebar}
+                  className="size-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  aria-label="Expand sidebar"
+                >
+                  <PanelLeftOpen className="size-4" />
+                </Button>
+              }
+            />
+            <TooltipContent side="right" className="text-xs">
+              Expand sidebar
+            </TooltipContent>
+          </Tooltip>
         ) : (
-          !isSidebarCollapsed && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleSidebar}
-              className="size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/5"
-              aria-label="Collapse sidebar"
-            >
-              <PanelLeftClose className="size-3.5" />
-            </Button>
-          )
+          <>
+            <Link href="/" className="flex items-center gap-2.5 min-w-0 group">
+              <div className="size-7 flex-shrink-0 rounded-lg gradient-brand flex items-center justify-center shadow-md group-hover:glow-brand-sm transition-all">
+                <Sparkles className="size-3.5 text-white" />
+              </div>
+              <span className="font-semibold text-sm tracking-tight whitespace-nowrap">
+                Nexa<span className="gradient-text">AI</span>
+              </span>
+            </Link>
+
+            {isMobile ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                aria-label="Close navigation drawer"
+              >
+                <X className="size-4" />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+                className="size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                aria-label="Collapse sidebar"
+              >
+                <PanelLeftClose className="size-3.5" />
+              </Button>
+            )}
+          </>
         )}
       </div>
 
@@ -200,16 +253,75 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
         )}
       </div>
 
+      {/* Workspace Quick View Navigation Tabs */}
+      {(isMobile || !isSidebarCollapsed) && (
+        <div className="px-3 py-1 flex items-center gap-1 border-b border-white/6 text-xs">
+          <button
+            onClick={() => setActiveView('all')}
+            className={cn(
+              'flex-1 py-1 px-2 rounded-md text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors',
+              activeView === 'all'
+                ? 'bg-white/10 text-foreground font-semibold'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+            )}
+          >
+            <MessageSquare className="size-3" />
+            <span>Chats</span>
+          </button>
+
+          <button
+            onClick={() => setActiveView('archived')}
+            className={cn(
+              'py-1 px-2 rounded-md text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors',
+              activeView === 'archived'
+                ? 'bg-white/10 text-foreground font-semibold'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+            )}
+            title="Archived chats"
+          >
+            <Archive className="size-3" />
+            <span>{archivedCount > 0 ? archivedCount : ''}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveView('trash')}
+            className={cn(
+              'py-1 px-2 rounded-md text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors',
+              activeView === 'trash'
+                ? 'bg-destructive/15 text-destructive font-semibold'
+                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+            )}
+            title="Trash"
+          >
+            <Trash2 className="size-3" />
+            <span>{trashCount > 0 ? trashCount : ''}</span>
+          </button>
+        </div>
+      )}
+
       {/* Main Conversation List */}
       {isMobile || !isSidebarCollapsed ? (
         <ConversationList
           groupedConversations={groupedConversations}
+          pinnedConversations={pinnedConversations}
+          folders={folders}
           activeConversationId={activeConversationId}
+          activeView={activeView}
+          selectedFolderId={selectedFolderId}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onSelectConversation={handleSelectConversation}
-          onDeleteConversation={deleteConversation}
+          onDeleteConversation={trashConversation}
           onRenameConversation={renameConversation}
+          onPinConversation={togglePinConversation}
+          onArchiveConversation={toggleArchiveConversation}
+          onMoveConversation={moveConversationToFolder}
+          onRestoreConversation={restoreConversation}
+          onPurgeConversation={purgeConversation}
+          onCreateFolder={createFolder}
+          onUpdateFolder={updateFolder}
+          onDeleteFolder={deleteFolder}
+          onSelectFolder={setSelectedFolderId}
         />
       ) : (
         <div className="flex-1 flex flex-col items-center py-3 gap-2 overflow-y-auto scrollbar-none">
@@ -236,6 +348,7 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
           </Tooltip>
         </div>
       )}
+
 
       {/* Secondary workspace links */}
       <div className={cn('border-t border-white/6 p-2 space-y-0.5', isSidebarCollapsed && 'p-1.5')}>
@@ -420,7 +533,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [isSearchOpen, setIsSearchOpen] = React.useState(false)
 
   React.useEffect(() => {
-    useAuthStore.getState().checkAuth()
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlToken = urlParams.get('token')
+      if (urlToken) {
+        useAuthStore.getState().setSession(urlToken)
+        const url = new URL(window.location.href)
+        url.searchParams.delete('token')
+        url.searchParams.delete('oauth')
+        const remaining = url.searchParams.toString()
+        window.history.replaceState({}, document.title, url.pathname + (remaining ? `?${remaining}` : ''))
+      } else {
+        useAuthStore.getState().checkAuth()
+      }
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {

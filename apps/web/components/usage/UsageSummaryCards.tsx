@@ -62,20 +62,20 @@ export const UsageSummaryCards: React.FC<UsageSummaryCardsProps> = ({ summary })
         return (
           <div
             key={i}
-            className="p-5 bg-slate-900/60 backdrop-blur border border-slate-800 rounded-2xl shadow-xl flex flex-col justify-between space-y-3"
+            className="p-5 bg-card text-card-foreground border border-border rounded-2xl shadow-sm flex flex-col justify-between space-y-3"
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-slate-400">{card.title}</span>
+              <span className="text-xs font-medium text-muted-foreground">{card.title}</span>
               <div className={`p-2 rounded-xl border ${card.color}`}>
                 <Icon className="w-4 h-4" />
               </div>
             </div>
 
             <div>
-              <div className="text-2xl font-bold font-mono text-white tracking-tight">
+              <div className="text-2xl font-bold font-mono text-foreground tracking-tight">
                 {card.value}
               </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">{card.subtitle}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">{card.subtitle}</p>
             </div>
           </div>
         )

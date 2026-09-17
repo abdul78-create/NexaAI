@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Check, Copy, RotateCw, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { Check, Copy, RotateCw, ThumbsUp, ThumbsDown, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
@@ -12,6 +12,11 @@ interface MessageActionsProps {
   isLastAssistantMessage?: boolean
   isStreaming?: boolean
   onRegenerate?: () => void
+  onEdit?: () => void
+  siblingIndex?: number
+  siblingCount?: number
+  siblingIds?: string[]
+  onSelectBranch?: (targetMessageId: string) => void
   tokens?: number
   className?: string
 }
@@ -22,6 +27,11 @@ export function MessageActions({
   isLastAssistantMessage,
   isStreaming,
   onRegenerate,
+  onEdit,
+  siblingIndex,
+  siblingCount,
+  siblingIds,
+  onSelectBranch,
   tokens,
   className,
 }: MessageActionsProps) {
@@ -39,7 +49,44 @@ export function MessageActions({
   }
 
   return (
-    <div className={cn('flex items-center gap-1 text-muted-foreground/60', className)}>
+    <div className={cn('flex items-center gap-1.5 text-muted-foreground/60', className)}>
+      {/* Branch Navigation Controls */}
+      {siblingCount !== undefined && siblingCount > 1 && siblingIds && onSelectBranch && (
+        <div className="flex items-center gap-0.5 text-xs font-mono text-muted-foreground bg-muted/40 rounded-md px-1 py-0.5 border border-white/5 mr-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={!siblingIndex || siblingIndex <= 1}
+            onClick={() => {
+              if (siblingIndex && siblingIndex > 1 && siblingIds) {
+                onSelectBranch(siblingIds[siblingIndex - 2])
+              }
+            }}
+            className="size-5 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground disabled:opacity-30"
+            aria-label="Previous branch version"
+          >
+            <ChevronLeft className="size-3" />
+          </Button>
+          <span className="px-1 text-[11px] select-none font-sans font-medium">
+            {siblingIndex || 1} / {siblingCount}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={!siblingIndex || siblingIndex >= siblingCount}
+            onClick={() => {
+              if (siblingIndex && siblingIndex < siblingCount && siblingIds) {
+                onSelectBranch(siblingIds[siblingIndex])
+              }
+            }}
+            className="size-5 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground disabled:opacity-30"
+            aria-label="Next branch version"
+          >
+            <ChevronRight className="size-3" />
+          </Button>
+        </div>
+      )}
+
       {/* Copy Button */}
       <Tooltip>
         <TooltipTrigger
@@ -60,8 +107,30 @@ export function MessageActions({
         </TooltipContent>
       </Tooltip>
 
+      {/* Edit Button (User only) */}
+      {role === 'user' && !isStreaming && onEdit && (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onEdit}
+                className="size-7 rounded-md hover:text-foreground hover:bg-white/5"
+                aria-label="Edit message"
+              >
+                <Pencil className="size-3.5" />
+              </Button>
+            }
+          />
+          <TooltipContent side="bottom" className="text-xs">
+            Edit prompt
+          </TooltipContent>
+        </Tooltip>
+      )}
+
       {/* Regenerate Button (Assistant only) */}
-      {role === 'assistant' && isLastAssistantMessage && !isStreaming && onRegenerate && (
+      {role === 'assistant' && !isStreaming && onRegenerate && (
         <Tooltip>
           <TooltipTrigger
             render={
@@ -136,3 +205,4 @@ export function MessageActions({
     </div>
   )
 }
+

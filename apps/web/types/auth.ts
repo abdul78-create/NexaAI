@@ -14,6 +14,8 @@ export interface User {
   isActive: boolean;
   isVerified: boolean;
   createdAt: string;
+  hasPassword?: boolean;
+  oauthProviders?: string[];
   usage?: UserUsage;
 }
 

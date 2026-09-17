@@ -98,18 +98,18 @@ export const SpeechWorkspace: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Top Banner Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-slate-900/80 backdrop-blur border border-slate-800 rounded-3xl shadow-xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-card text-card-foreground border border-border rounded-3xl shadow-sm">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-              <Mic className="w-6 h-6 text-indigo-400" />
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-foreground">
+              <Mic className="w-6 h-6 text-indigo-500" />
               Speech Intelligence Studio
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
               Phase 13
             </span>
           </div>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted-foreground">
             Microphone recording, audio uploads, and AI Speech-to-Text transcription.
           </p>
         </div>
@@ -128,15 +128,15 @@ export const SpeechWorkspace: React.FC = () => {
         {/* Left Column (Inputs & Controls) */}
         <div className="lg:col-span-5 space-y-6">
           {/* Audio Input Tabs */}
-          <div className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-2xl p-5 shadow-xl space-y-5">
-            <div className="flex items-center p-1 bg-slate-950 rounded-xl border border-slate-800">
+          <div className="bg-card text-card-foreground border border-border rounded-2xl p-5 shadow-sm space-y-5">
+            <div className="flex items-center p-1 bg-muted rounded-xl border border-border">
               <button
                 type="button"
                 onClick={() => setActiveTab('record')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold rounded-lg transition-all ${
                   activeTab === 'record'
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Mic className="w-4 h-4" />
@@ -148,8 +148,8 @@ export const SpeechWorkspace: React.FC = () => {
                 onClick={() => setActiveTab('upload')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold rounded-lg transition-all ${
                   activeTab === 'upload'
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Upload className="w-4 h-4" />
@@ -160,7 +160,7 @@ export const SpeechWorkspace: React.FC = () => {
             {/* Optional Settings */}
             <div className="grid grid-cols-2 gap-3 pt-2">
               <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                <label className="block text-[11px] font-medium text-muted-foreground mb-1">
                   Language Hint
                 </label>
                 <input
@@ -168,12 +168,12 @@ export const SpeechWorkspace: React.FC = () => {
                   value={languageInput}
                   onChange={(e) => setLanguageInput(e.target.value)}
                   placeholder="e.g. en, es, fr"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-xl text-xs text-foreground focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-medium text-slate-400 mb-1">
+                <label className="block text-[11px] font-medium text-muted-foreground mb-1">
                   Context Prompt
                 </label>
                 <input
@@ -181,7 +181,7 @@ export const SpeechWorkspace: React.FC = () => {
                   value={promptInput}
                   onChange={(e) => setPromptInput(e.target.value)}
                   placeholder="Glossary or names..."
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-xl text-xs text-foreground focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
@@ -212,11 +212,11 @@ export const SpeechWorkspace: React.FC = () => {
         {/* Right Column (Status & Transcript Output) */}
         <div className="lg:col-span-7 space-y-6">
           {errorMessage && (
-            <div className="flex items-start gap-3 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm rounded-2xl">
-              <AlertCircle className="w-5 h-5 text-rose-400 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start gap-3 p-4 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-2xl">
+              <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
               <div>
-                <h4 className="font-semibold text-rose-200">Transcription Error</h4>
-                <p className="text-xs text-rose-300 mt-0.5">{errorMessage}</p>
+                <h4 className="font-semibold text-destructive">Transcription Error</h4>
+                <p className="text-xs text-destructive/90 mt-0.5">{errorMessage}</p>
               </div>
             </div>
           )}
@@ -226,8 +226,8 @@ export const SpeechWorkspace: React.FC = () => {
           ) : currentTranscription ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-indigo-400" />
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-indigo-500" />
                   Active Transcript
                 </h3>
               </div>
@@ -240,12 +240,12 @@ export const SpeechWorkspace: React.FC = () => {
               />
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center p-12 bg-slate-900/40 border border-slate-800 rounded-3xl text-center space-y-3">
-              <div className="p-4 bg-slate-800/60 rounded-2xl text-slate-500">
+            <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded-3xl text-center space-y-3">
+              <div className="p-4 bg-muted rounded-2xl text-muted-foreground">
                 <FileAudio className="w-10 h-10" />
               </div>
-              <h3 className="text-base font-semibold text-slate-300">No Transcript Loaded</h3>
-              <p className="text-xs text-slate-500 max-w-sm">
+              <h3 className="text-base font-semibold text-foreground">No Transcript Loaded</h3>
+              <p className="text-xs text-muted-foreground max-w-sm">
                 Record microphone audio or upload an audio file on the left to view and edit its AI-generated transcription.
               </p>
             </div>

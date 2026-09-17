@@ -4,13 +4,13 @@ services:
     container_name: nexaai_postgres_prod
     restart: always
     environment:
-      POSTGRES_DB: nexaai
-      POSTGRES_USER: nexaai_user
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-prod_secure_pg_password_999}
+      POSTGRES_DB: ${POSTGRES_DB:-nexaai}
+      POSTGRES_USER: ${POSTGRES_USER:-nexaai_user}
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Error POSTGRES_PASSWORD environment variable is required}"
     volumes:
       - pgdata_prod:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nexaai_user -d nexaai"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexaai_user} -d ${POSTGRES_DB:-nexaai}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -37,11 +37,15 @@ services:
       APP_NAME: "NexaAI API"
       APP_ENV: "production"
       DEBUG: "false"
-      DATABASE_URL: "postgresql+asyncpg://nexaai_user:${POSTGRES_PASSWORD:-prod_secure_pg_password_999}@postgres:5432/nexaai"
+      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-nexaai_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nexaai}"
       REDIS_URL: "redis://redis:6379/0"
-      SECRET_KEY: "${SECRET_KEY:-prod_secure_secret_key_minimum_32_characters_long_hash}"
+      SECRET_KEY: "${SECRET_KEY:?Error SECRET_KEY environment variable is required}"
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
       OPENAI_BASE_URL: "${OPENAI_BASE_URL:-https://api.openai.com/v1}"
+      OPENAI_MODEL: "${OPENAI_MODEL:-gpt-4o-mini}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-[\"http://localhost\", \"https://localhost\", \"http://localhost:8000\", \"http://localhost:3000\"]}"
+    ports:
+      - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,13 +61,20 @@ services:
     build:
       context: ../apps/web
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: "/api/v1"
     container_name: nexaai_web_prod
     restart: always
     environment:
       NODE_ENV: "production"
-      NEXT_PUBLIC_API_URL: "http://localhost/api/v1"
+      NEXT_PUBLIC_API_URL: "/api/v1"
     depends_on:
       - api
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   nginx:
     image: nginx:1.25-alpine

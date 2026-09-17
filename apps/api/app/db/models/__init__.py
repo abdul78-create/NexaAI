@@ -17,6 +17,9 @@ from app.db.models.usage import AIUsageLog
 from app.db.models.speech import SpeechTranscription
 from app.db.models.preferences import UserPreferences
 from app.db.models.share import ConversationShare
+from app.db.models.folder import Folder
+from app.db.models.oauth_account import OAuthAccount
+from app.db.models.prompt import Prompt
 
 
 class SystemMetadata(Base, TimestampMixin):
@@ -52,5 +55,8 @@ __all__ = [
     "SpeechTranscription",
     "UserPreferences",
     "ConversationShare",
+    "Folder",
+    "OAuthAccount",
+    "Prompt",
 ]
 

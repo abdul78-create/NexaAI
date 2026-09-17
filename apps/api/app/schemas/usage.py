@@ -65,6 +65,9 @@ class UsageHistoryItem(BaseModel):
     execution_duration_ms: int
     status: str
     error_code: Optional[str] = None
+    mode: Optional[str] = None
+    conversation_id: Optional[UUID] = None
+    estimated_cost: Optional[float] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -86,9 +89,20 @@ class QuotaItemDetail(BaseModel):
     unit: str
 
 
+class HighModeStatusResponse(BaseModel):
+    """High-mode daily usage status."""
+
+    mode: str = "high"
+    limit: int
+    used: int
+    remaining: int
+    resets_at: str
+
+
 class QuotaSummaryResponse(BaseModel):
     """Quota status response for current user."""
 
     plan_code: str
     quotas: Dict[str, QuotaItemDetail]
+    high_mode_status: Optional[HighModeStatusResponse] = None
     resets_at: datetime

@@ -172,34 +172,34 @@ export const MicrophoneRecorder: React.FC<MicrophoneRecorderProps> = ({
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 bg-slate-900/60 backdrop-blur border border-slate-800 rounded-2xl shadow-xl space-y-5">
+    <div className="flex flex-col items-center justify-center p-6 bg-card text-card-foreground border border-border rounded-2xl shadow-sm space-y-5">
       {permissionError && (
-        <div className="w-full flex items-start gap-3 p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm rounded-xl">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-400 mt-0.5" />
+        <div className="w-full flex items-start gap-3 p-3.5 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-xl">
+          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1">{permissionError}</div>
         </div>
       )}
 
       {/* Recording Display & Waveform */}
       <div className="flex flex-col items-center space-y-2">
-        <div className="text-4xl font-mono font-bold tracking-tight text-white">
+        <div className="text-4xl font-mono font-bold tracking-tight text-foreground">
           {formatTimer(duration)}
         </div>
-        <div className="text-xs text-slate-400">
+        <div className="text-xs text-muted-foreground">
           Max Duration: {formatTimer(maxDurationSeconds)}
         </div>
 
         {recordingState === 'recording' && (
           <div className="flex items-center gap-1.5 py-1">
             <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
-            <span className="text-xs font-semibold text-rose-400 uppercase tracking-wider">Recording</span>
+            <span className="text-xs font-semibold text-rose-500 uppercase tracking-wider">Recording</span>
           </div>
         )}
 
         {recordingState === 'paused' && (
           <div className="flex items-center gap-1.5 py-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-            <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Paused</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+            <span className="text-xs font-semibold text-amber-500 uppercase tracking-wider">Paused</span>
           </div>
         )}
       </div>
@@ -211,7 +211,7 @@ export const MicrophoneRecorder: React.FC<MicrophoneRecorderProps> = ({
             type="button"
             onClick={startRecording}
             disabled={disabled}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium rounded-xl shadow-lg shadow-indigo-600/25 transition-all"
+            className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium rounded-xl shadow-sm transition-all"
           >
             <Mic className="w-5 h-5" />
             Start Recording
@@ -223,7 +223,7 @@ export const MicrophoneRecorder: React.FC<MicrophoneRecorderProps> = ({
             <button
               type="button"
               onClick={pauseRecording}
-              className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition-all"
+              className="p-3 bg-secondary hover:bg-secondary/80 text-foreground border border-border rounded-xl transition-all"
               title="Pause Recording"
             >
               <Pause className="w-5 h-5" />
@@ -232,7 +232,7 @@ export const MicrophoneRecorder: React.FC<MicrophoneRecorderProps> = ({
             <button
               type="button"
               onClick={stopRecording}
-              className="flex items-center gap-2 px-5 py-3 bg-rose-600 hover:bg-rose-500 text-white font-medium rounded-xl shadow-lg shadow-rose-600/25 transition-all"
+              className="flex items-center gap-2 px-5 py-3 bg-rose-600 hover:bg-rose-500 text-white font-medium rounded-xl shadow-sm transition-all"
             >
               <Square className="w-5 h-5 fill-current" />
               Stop Recording
@@ -245,7 +245,7 @@ export const MicrophoneRecorder: React.FC<MicrophoneRecorderProps> = ({
             <button
               type="button"
               onClick={resumeRecording}
-              className="flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-600/25 transition-all"
+              className="flex items-center gap-2 px-5 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-xl shadow-sm transition-all"
             >
               <Play className="w-5 h-5 fill-current" />
               Resume
@@ -254,7 +254,7 @@ export const MicrophoneRecorder: React.FC<MicrophoneRecorderProps> = ({
             <button
               type="button"
               onClick={stopRecording}
-              className="flex items-center gap-2 px-5 py-3 bg-rose-600 hover:bg-rose-500 text-white font-medium rounded-xl shadow-lg shadow-rose-600/25 transition-all"
+              className="flex items-center gap-2 px-5 py-3 bg-rose-600 hover:bg-rose-500 text-white font-medium rounded-xl shadow-sm transition-all"
             >
               <Square className="w-5 h-5 fill-current" />
               Stop
@@ -267,7 +267,7 @@ export const MicrophoneRecorder: React.FC<MicrophoneRecorderProps> = ({
             <button
               type="button"
               onClick={handleReset}
-              className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium rounded-xl transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 bg-secondary hover:bg-secondary/80 text-foreground border border-border text-sm font-medium rounded-xl transition-all"
             >
               <RefreshCw className="w-4 h-4" />
               Re-record
@@ -277,7 +277,7 @@ export const MicrophoneRecorder: React.FC<MicrophoneRecorderProps> = ({
               type="button"
               onClick={handleUseRecording}
               disabled={disabled}
-              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium rounded-xl shadow-lg shadow-emerald-600/25 transition-all"
+              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium rounded-xl shadow-sm transition-all"
             >
               <Volume2 className="w-4 h-4" />
               Use This Recording
@@ -288,8 +288,8 @@ export const MicrophoneRecorder: React.FC<MicrophoneRecorderProps> = ({
 
       {/* Audio Playback Preview */}
       {audioUrl && recordingState === 'stopped' && (
-        <div className="w-full pt-2 border-t border-slate-800/80">
-          <audio controls src={audioUrl} className="w-full h-10 rounded-lg bg-slate-950" />
+        <div className="w-full pt-2 border-t border-border">
+          <audio controls src={audioUrl} className="w-full h-10 rounded-lg bg-muted" />
         </div>
       )}
     </div>

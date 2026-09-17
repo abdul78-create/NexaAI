@@ -235,11 +235,12 @@ async def get_public_shared_conversation(
                 status_code=status.HTTP_410_GONE,
                 detail="This shared conversation link has expired.",
             )
-        elif reason in ("disabled", "revoked"):
+        elif reason in ("disabled", "revoked", "trashed"):
             raise HTTPException(
                 status_code=status.HTTP_410_GONE,
-                detail="This shared conversation link has been revoked or disabled by the owner.",
+                detail="This shared conversation link has been revoked, deleted, or moved to trash.",
             )
+
         else:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

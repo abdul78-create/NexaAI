@@ -25,6 +25,10 @@ class UsageService:
         execution_duration_ms: int = 0,
         status: str = "success",
         error_code: Optional[str] = None,
+        mode: Optional[str] = None,
+        conversation_id: Optional[uuid.UUID] = None,
+        message_id: Optional[uuid.UUID] = None,
+        estimated_cost: Optional[float] = None,
     ) -> AIUsageLog:
         """Persist an execution usage record."""
         total_tokens = prompt_tokens + completion_tokens
@@ -39,8 +43,13 @@ class UsageService:
             execution_duration_ms=execution_duration_ms,
             status=status,
             error_code=error_code,
+            mode=mode,
+            conversation_id=conversation_id,
+            message_id=message_id,
+            estimated_cost=estimated_cost,
         )
         self.db.add(log_entry)
         await self.db.commit()
         await self.db.refresh(log_entry)
         return log_entry
+

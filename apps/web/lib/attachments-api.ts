@@ -5,7 +5,9 @@
  * Matches AttachmentResponse and AttachmentListResponse Pydantic schemas.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+import { getApiBaseUrl } from './api-config'
+
+const API_BASE = getApiBaseUrl()
 
 export type AttachmentMediaType = 'image' | 'audio' | 'document' | 'video' | 'other'
 export type AttachmentStatus = 'uploading' | 'ready' | 'processing' | 'failed' | 'deleted'

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ModelSelector } from '@/components/chat/ModelSelector'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { useChatStore } from '@/stores/chat-store'
 
 interface ChatComposerProps {
   onSendMessage: (content: string) => void
@@ -28,6 +29,20 @@ export function ChatComposer({
   const [attachments, setAttachments] = useState<string[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const draftInput = useChatStore((s) => s.draftInput)
+  const setDraftInput = useChatStore((s) => s.setDraftInput)
+
+  // Sync draftInput from prompt library or templates
+  useEffect(() => {
+    if (draftInput) {
+      setContent(draftInput)
+      setDraftInput('')
+      setTimeout(() => {
+        textareaRef.current?.focus()
+      }, 50)
+    }
+  }, [draftInput, setDraftInput])
 
   // Check for pending chat input staged from Speech Studio or other tools
   useEffect(() => {

@@ -43,7 +43,7 @@ class UserProfileResponse(BaseModel):
     id: UUID
     email: str
     display_name: str
-    role: str
+    role: str = "user"
     is_active: bool
     created_at: datetime
 

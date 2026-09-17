@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { useChat } from '@/hooks/useChat'
+import { useChatStore } from '@/stores/chat-store'
 import { ChatHeader } from '@/components/chat/ChatHeader'
 import { MessageList } from '@/components/chat/MessageList'
 import { ChatComposer } from '@/components/chat/ChatComposer'
@@ -9,6 +10,7 @@ import { ChatComposer } from '@/components/chat/ChatComposer'
 export function ChatWorkspace() {
   const {
     activeConversation,
+    activeConversationId,
     messages,
     activeModel,
     isStreaming,
@@ -19,10 +21,19 @@ export function ChatWorkspace() {
     clearActiveConversation,
     setSelectedModel,
     setMobileSidebarOpen,
+    editUserMessageBranch,
+    regenerateAssistantMessageBranch,
+    selectBranch,
   } = useChat()
 
   const handleSelectPrompt = (prompt: string) => {
-    sendMessage(prompt)
+    useChatStore.getState().setDraftInput(prompt)
+  }
+
+  const handleSelectBranch = (targetMessageId: string) => {
+    if (activeConversationId) {
+      selectBranch(activeConversationId, targetMessageId)
+    }
   }
 
   return (
@@ -43,6 +54,9 @@ export function ChatWorkspace() {
         modelName={activeModel.name}
         onSelectPrompt={handleSelectPrompt}
         onRegenerate={regenerateLastMessage}
+        onRegenerateMessage={regenerateAssistantMessageBranch}
+        onEditMessage={editUserMessageBranch}
+        onSelectBranch={handleSelectBranch}
       />
 
       {/* Floating Bottom Composer */}

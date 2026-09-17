@@ -26,6 +26,8 @@ class UserResponse(UserBase):
     is_active: bool = True
     is_verified: bool = False
     created_at: datetime
+    has_password: bool = True
+    oauth_providers: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
