@@ -5,6 +5,26 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _parse_list_or_str(v: Union[str, List[str]], default_if_empty: Optional[List[str]] = None) -> List[str]:
+    """Parse environment string (single URL, comma-separated, or JSON list) into List[str]."""
+    if isinstance(v, str):
+        v_str = v.strip()
+        if not v_str:
+            return default_if_empty if default_if_empty is not None else []
+        if v_str.startswith("[") and v_str.endswith("]"):
+            import json
+            try:
+                parsed = json.loads(v_str)
+                if isinstance(parsed, list):
+                    return [str(item).strip() for item in parsed if str(item).strip()]
+            except Exception:
+                pass
+        return [i.strip() for i in v_str.split(",") if i.strip()]
+    elif isinstance(v, list):
+        return [str(i).strip() for i in v if str(i).strip()]
+    return default_if_empty if default_if_empty is not None else []
+
+
 class Settings(BaseSettings):
     """NexaAI typed application settings."""
 
@@ -51,29 +71,16 @@ class Settings(BaseSettings):
     CHAT_MODE_HIGH_MODEL: str = "gpt-4o"
     CHAT_MODE_HIGH_DAILY_LIMIT: int = 5
 
-    # CORS
-    CORS_ORIGINS: List[str] = [
+    # CORS (accepts JSON array string, comma-separated URLs, or plain URL string)
+    CORS_ORIGINS: Union[str, List[str]] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
 
-    @field_validator("CORS_ORIGINS", mode="before")
+    @field_validator("CORS_ORIGINS", mode="after")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        if isinstance(v, str):
-            v_str = v.strip()
-            if v_str.startswith("[") and v_str.endswith("]"):
-                import json
-                try:
-                    parsed = json.loads(v_str)
-                    if isinstance(parsed, list):
-                        return [str(item).strip() for item in parsed if str(item).strip()]
-                except Exception:
-                    pass
-            return [i.strip() for i in v_str.split(",") if i.strip()]
-        elif isinstance(v, list):
-            return [str(i).strip() for i in v if str(i).strip()]
-        raise ValueError(f"Invalid CORS origins format: {v}")
+        return _parse_list_or_str(v, ["http://localhost:3000", "http://127.0.0.1:3000"])
 
     # Database
     DATABASE_URL: str = Field(
@@ -111,19 +118,19 @@ class Settings(BaseSettings):
     MAX_AUDIO_DURATION_SECONDS: int = 600  # placeholder for Phase 13
 
     # MIME allowlists (comma-separated string or list in env)
-    ALLOWED_IMAGE_MIMETYPES: List[str] = [
+    ALLOWED_IMAGE_MIMETYPES: Union[str, List[str]] = [
         "image/jpeg",
         "image/png",
         "image/webp",
         "image/gif",
     ]
-    ALLOWED_DOCUMENT_MIMETYPES: List[str] = [
+    ALLOWED_DOCUMENT_MIMETYPES: Union[str, List[str]] = [
         "application/pdf",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "text/plain",
         "text/markdown",
     ]
-    ALLOWED_AUDIO_MIMETYPES: List[str] = [
+    ALLOWED_AUDIO_MIMETYPES: Union[str, List[str]] = [
         "audio/webm",
         "audio/mpeg",
         "audio/wav",
@@ -131,6 +138,16 @@ class Settings(BaseSettings):
         "audio/x-m4a",
         "audio/ogg",
     ]
+
+    @field_validator(
+        "ALLOWED_IMAGE_MIMETYPES",
+        "ALLOWED_DOCUMENT_MIMETYPES",
+        "ALLOWED_AUDIO_MIMETYPES",
+        mode="after",
+    )
+    @classmethod
+    def assemble_mime_types(cls, v: Union[str, List[str]]) -> List[str]:
+        return _parse_list_or_str(v)
 
     # Feature flags
     ENABLE_IMAGE_FEATURES: bool = True
