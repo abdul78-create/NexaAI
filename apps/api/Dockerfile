@@ -40,6 +40,6 @@ USER appuser
 EXPOSE 8000
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-  CMD curl -f http://localhost:8000/health/liveness || exit 1
+  CMD curl -f http://localhost:${PORT:-8000}/health/liveness || exit 1
 
-CMD ["/app/deps/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["sh", "-c", "/app/deps/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"]
