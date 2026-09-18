@@ -87,6 +87,19 @@ class Settings(BaseSettings):
         default="sqlite+aiosqlite:///./nexaai.db",
         description="Async database connection string. Defaults to local SQLite for seamless zero-config development, or postgresql+asyncpg:// for production.",
     )
+
+    @field_validator("DATABASE_URL", mode="after")
+    @classmethod
+    def normalize_database_url(cls, v: str) -> str:
+        if isinstance(v, str):
+            v_str = v.strip()
+            if v_str.startswith("postgres://"):
+                return "postgresql+asyncpg://" + v_str[len("postgres://"):]
+            if v_str.startswith("postgresql://") and not v_str.startswith("postgresql+asyncpg://"):
+                return "postgresql+asyncpg://" + v_str[len("postgresql://"):]
+            return v_str
+        return v
+
     DB_POOL_SIZE: int = 5
     DB_MAX_OVERFLOW: int = 10
     DB_POOL_TIMEOUT: int = 30
