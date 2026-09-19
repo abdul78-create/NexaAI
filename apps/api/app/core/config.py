@@ -66,9 +66,9 @@ class Settings(BaseSettings):
     GITHUB_REDIRECT_URI: Optional[str] = None
 
     # Chat Modes (Task 4)
-    CHAT_MODE_LOW_MODEL: str = "gpt-4o-mini"
-    CHAT_MODE_STANDARD_MODEL: str = "gpt-4o-mini"
-    CHAT_MODE_HIGH_MODEL: str = "gpt-4o"
+    CHAT_MODE_LOW_MODEL: str = "gemini-2.5-flash"
+    CHAT_MODE_STANDARD_MODEL: str = "gemini-2.5-flash"
+    CHAT_MODE_HIGH_MODEL: str = "gemini-2.5-pro"
     CHAT_MODE_HIGH_DAILY_LIMIT: int = 5
 
     # CORS (accepts JSON array string, comma-separated URLs, or plain URL string)
@@ -107,8 +107,11 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    # AI Integration (Phase 6)
-    AI_PROVIDER: str = "openai"
+    # AI Integration (Gemini Primary / OpenAI Optional Fallback)
+    AI_PROVIDER: str = "gemini"
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    GEMINI_MODEL: str = "gemini-2.5-flash"
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
@@ -170,14 +173,18 @@ class Settings(BaseSettings):
     MAX_IMAGE_WIDTH: int = 4096
     MAX_IMAGE_HEIGHT: int = 4096
     OCR_PROVIDER: str = "mock"  # "tesseract" | "mock"
-    VISION_PROVIDER: str = "openai"  # "openai" | "mock"
+    VISION_PROVIDER: str = "gemini"  # "gemini" | "openai" | "mock"
     OCR_DEFAULT_LANGUAGE: str = "eng"
-    VISION_MODEL: str = "gpt-4o"
+    VISION_MODEL: str = "gemini-2.5-flash"
     VISION_TIMEOUT_SECONDS: float = 30.0
     VISION_MAX_IMAGE_BYTES: int = 10_485_760  # 10 MB
     VISION_MAX_PROMPT_LENGTH: int = 2000
     VISION_MAX_OUTPUT_TOKENS: int = 1000
     VISION_MAX_REQUESTS_PER_MINUTE: int = 60
+
+    # ── Document Intelligence & Embeddings ─────────────────────────────────
+    EMBEDDING_PROVIDER: str = "mock"  # "mock" | "gemini" | "openai"
+    EMBEDDING_MODEL: str = "gemini-embedding-001"
 
     # ── Phase 13: Speech Intelligence & Speech-to-Text ─────────────────────
     AUDIO_MAX_FILE_SIZE_MB: int = 25

@@ -61,6 +61,50 @@ MODEL_CAPABILITIES_REGISTRY: Dict[str, ModelCapabilities] = {
         streaming=True,
         max_context_tokens=128000,
     ),
+    "gemini-2.5-flash": ModelCapabilities(
+        model_id="gemini-2.5-flash",
+        name="Gemini 2.5 Flash",
+        text=True,
+        vision=True,
+        audio=False,
+        documents=True,
+        streaming=True,
+        max_context_tokens=1048576,
+        max_output_tokens=8192,
+    ),
+    "gemini-2.5-pro": ModelCapabilities(
+        model_id="gemini-2.5-pro",
+        name="Gemini 2.5 Pro",
+        text=True,
+        vision=True,
+        audio=False,
+        documents=True,
+        streaming=True,
+        max_context_tokens=2097152,
+        max_output_tokens=8192,
+    ),
+    "gemini-3.8-flash": ModelCapabilities(
+        model_id="gemini-3.8-flash",
+        name="Gemini 3.8 Flash",
+        text=True,
+        vision=True,
+        audio=False,
+        documents=True,
+        streaming=True,
+        max_context_tokens=1048576,
+        max_output_tokens=8192,
+    ),
+    "gemini-1.5-flash": ModelCapabilities(
+        model_id="gemini-1.5-flash",
+        name="Gemini 1.5 Flash",
+        text=True,
+        vision=True,
+        audio=False,
+        documents=True,
+        streaming=True,
+        max_context_tokens=1048576,
+        max_output_tokens=8192,
+    ),
     "mock-model": ModelCapabilities(
         model_id="mock-model",
         name="Mock AI Model",
@@ -79,14 +123,18 @@ def get_model_capabilities(model_id: str) -> ModelCapabilities:
     if model_id in MODEL_CAPABILITIES_REGISTRY:
         return MODEL_CAPABILITIES_REGISTRY[model_id]
     
-    # Generic fallback for unknown or OpenAI-compatible models
+    # Generic fallback: detect multimodal vision capability without fragile 4o-only checks
+    m_lower = model_id.lower()
+    is_vision = any(k in m_lower for k in ("vision", "4o", "gemini", "flash"))
+    max_context = 1048576 if "gemini" in m_lower else 16384
+
     return ModelCapabilities(
         model_id=model_id,
         name=model_id,
         text=True,
-        vision="vision" in model_id.lower() or "4o" in model_id.lower(),
+        vision=is_vision,
         audio=False,
         documents=True,
         streaming=True,
-        max_context_tokens=16384,
+        max_context_tokens=max_context,
     )

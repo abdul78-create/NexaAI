@@ -86,15 +86,80 @@ class OpenAIEmbeddingProvider(BaseEmbeddingProvider):
         return [data.embedding for data in response.data]
 
 
-def get_embedding_provider(provider_name: Optional[str] = None) -> BaseEmbeddingProvider:
-    """Factory function resolving active BaseEmbeddingProvider."""
-    target = (provider_name or settings.AI_PROVIDER).lower()
-    api_key = settings.OPENAI_API_KEY
+class GeminiEmbeddingProvider(BaseEmbeddingProvider):
+    """Google Gemini Embedding Provider using OpenAI-compatible embeddings endpoint."""
 
-    if target == "mock" or not api_key or api_key.strip() in ("", "mock", "your-secret-key"):
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/",
+        model: Optional[str] = None,
+    ):
+        from openai import AsyncOpenAI
+        self.client = AsyncOpenAI(api_key=api_key, base_url=base_url.rstrip("/"))
+        self.model = model or getattr(settings, "EMBEDDING_MODEL", "gemini-embedding-001")
+
+    async def embed_text(self, text: str) -> List[float]:
+        response = await self.client.embeddings.create(
+            model=self.model,
+            input=text,
+        )
+        return response.data[0].embedding
+
+    async def embed_batch(self, texts: List[str]) -> List[List[float]]:
+        if not texts:
+            return []
+        response = await self.client.embeddings.create(
+            model=self.model,
+            input=texts,
+        )
+        return [data.embedding for data in response.data]
+
+
+def get_embedding_provider(provider_name: Optional[str] = None) -> BaseEmbeddingProvider:
+    """Factory function resolving active BaseEmbeddingProvider.
+    
+    Resolves between Gemini, OpenAI, and Mock providers based on environment configuration.
+    NOTE: If switching between OpenAI (1536-dim) and Gemini embeddings, existing stored document
+    embeddings must be re-indexed to prevent vector dimension or semantic space mismatch.
+    """
+    target = (provider_name or getattr(settings, "EMBEDDING_PROVIDER", "mock")).lower()
+
+    if target == "mock":
         return MockEmbeddingProvider()
 
-    return OpenAIEmbeddingProvider(
-        api_key=api_key,
-        base_url=settings.OPENAI_BASE_URL,
-    )
+    # Gemini embedding provider
+    if target == "gemini":
+        gemini_key = getattr(settings, "GEMINI_API_KEY", None) or settings.OPENAI_API_KEY
+        if gemini_key and gemini_key.strip() not in ("", "mock", "your-secret-key", "your-gemini-api-key"):
+            return GeminiEmbeddingProvider(
+                api_key=gemini_key,
+                base_url=getattr(settings, "GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/"),
+                model=getattr(settings, "EMBEDDING_MODEL", "gemini-embedding-001"),
+            )
+        # Fallback to OpenAI if Gemini key not set but OpenAI key is
+        if settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.strip() not in ("", "mock", "your-secret-key"):
+            return OpenAIEmbeddingProvider(
+                api_key=settings.OPENAI_API_KEY,
+                base_url=settings.OPENAI_BASE_URL,
+            )
+        return MockEmbeddingProvider()
+
+    # OpenAI embedding provider
+    if target == "openai":
+        openai_key = settings.OPENAI_API_KEY
+        if openai_key and openai_key.strip() not in ("", "mock", "your-secret-key"):
+            return OpenAIEmbeddingProvider(
+                api_key=openai_key,
+                base_url=settings.OPENAI_BASE_URL,
+            )
+        # Fallback to Gemini if available
+        gemini_key = getattr(settings, "GEMINI_API_KEY", None)
+        if gemini_key and gemini_key.strip() not in ("", "mock", "your-secret-key", "your-gemini-api-key"):
+            return GeminiEmbeddingProvider(
+                api_key=gemini_key,
+                base_url=getattr(settings, "GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/"),
+            )
+        return MockEmbeddingProvider()
+
+    return MockEmbeddingProvider()

@@ -44,8 +44,20 @@ def get_ocr_provider() -> BaseOCRProvider:
 
 def get_vision_provider() -> BaseVisionProvider:
     """Factory resolver for configured Vision AI provider with fallback."""
-    if settings.VISION_PROVIDER == "openai" and settings.OPENAI_API_KEY:
-        return OpenAIVisionProvider()
+    if settings.VISION_PROVIDER.lower() == "gemini" and settings.GEMINI_API_KEY:
+        return OpenAIVisionProvider(
+            api_key=settings.GEMINI_API_KEY,
+            base_url=settings.GEMINI_BASE_URL,
+            default_model=settings.VISION_MODEL or "gemini-2.5-flash",
+            provider_name="gemini",
+        )
+    if settings.VISION_PROVIDER.lower() in ("openai", "gemini") and settings.OPENAI_API_KEY:
+        return OpenAIVisionProvider(
+            api_key=settings.OPENAI_API_KEY,
+            base_url=settings.OPENAI_BASE_URL,
+            default_model="gpt-4o",
+            provider_name="openai",
+        )
     return MockVisionProvider()
 
 

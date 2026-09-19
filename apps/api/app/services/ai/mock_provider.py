@@ -15,6 +15,8 @@ from app.services.ai.base import (
 class MockAIProvider(BaseAIProvider):
     """Mock AI Provider for zero-config offline execution, guest mode, and pytest testing."""
 
+    provider_name: str = "mock"
+
     SUPPORTED_MODELS = [
         {
             "id": "nexa-ultra",

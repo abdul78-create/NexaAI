@@ -12,31 +12,58 @@ from app.services.ai.base import (
 
 
 class OpenAIProvider(BaseAIProvider):
-    """OpenAI-compatible AI Provider supporting streaming, custom endpoints, and token tracking."""
+    """OpenAI-compatible AI Provider supporting Gemini, OpenAI, Ollama, vLLM, & Groq."""
 
-    MODEL_MAP = {
+    OPENAI_MODEL_MAP = {
         "nexa-ultra": "gpt-4o",
         "nexa-standard": "gpt-4o-mini",
         "nexa-coder": "gpt-4o-mini",
     }
 
+    GEMINI_MODEL_MAP = {
+        "nexa-ultra": "gemini-2.5-pro",
+        "nexa-standard": "gemini-2.5-flash",
+        "nexa-coder": "gemini-2.5-flash",
+    }
+
     def __init__(
         self,
         api_key: str,
-        base_url: str = "https://api.openai.com/v1",
-        default_model: str = "gpt-4o-mini",
+        base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/",
+        default_model: Optional[str] = None,
         timeout: float = 30.0,
+        provider_name: Optional[str] = None,
     ):
+        self.api_key = api_key
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+
+        # Detect provider: explicitly set or inferred from base_url
+        if provider_name:
+            self.provider_name = provider_name.lower()
+        elif "googleapis.com" in self.base_url.lower():
+            self.provider_name = "gemini"
+        else:
+            self.provider_name = "openai"
+
+        # Resolve default model based on detected provider
+        if default_model:
+            self.default_model = default_model
+        elif self.provider_name == "gemini":
+            self.default_model = "gemini-2.5-flash"
+        else:
+            self.default_model = "gpt-4o-mini"
+
         self.client = AsyncOpenAI(
             api_key=api_key,
-            base_url=base_url,
+            base_url=self.base_url,
             timeout=timeout,
         )
-        self.default_model = default_model
 
     def _resolve_model(self, model: str) -> str:
-        """Resolve NexaAI UI model alias to backend OpenAI model name."""
-        return self.MODEL_MAP.get(model, model or self.default_model)
+        """Resolve NexaAI UI model alias to backend provider model name."""
+        model_map = self.GEMINI_MODEL_MAP if self.provider_name == "gemini" else self.OPENAI_MODEL_MAP
+        return model_map.get(model, model or self.default_model)
 
     async def generate(
         self,
@@ -79,8 +106,11 @@ class OpenAIProvider(BaseAIProvider):
             "model": resolved_model,
             "messages": formatted_msgs,
             "stream": True,
-            "stream_options": {"include_usage": True},
         }
+        # CRITICAL: Google's Gemini OpenAI-compatible endpoint rejects stream_options with 400 Bad Request.
+        # Only include stream_options when targeting native OpenAI.
+        if self.provider_name != "gemini" and "googleapis.com" not in self.base_url.lower():
+            kwargs["stream_options"] = {"include_usage": True}
         if temperature is not None:
             kwargs["temperature"] = temperature
 
@@ -151,6 +181,43 @@ class OpenAIProvider(BaseAIProvider):
             )
 
     async def list_models(self) -> List[Dict[str, Any]]:
+        if self.provider_name == "gemini":
+            return [
+                {
+                    "id": "nexa-ultra",
+                    "name": "Nexa Ultra (Gemini 2.5 Pro)",
+                    "tagline": "Most capable model for complex reasoning and deep analytical tasks",
+                    "description": "Powered by Google Gemini 2.5 Pro for advanced multimodal problem solving.",
+                    "badge": "Flagship",
+                    "speed": "Deep",
+                    "reasoning": "Maximum",
+                    "contextWindow": "2M",
+                    "isAvailable": True,
+                },
+                {
+                    "id": "nexa-standard",
+                    "name": "Nexa Standard (Gemini 2.5 Flash)",
+                    "tagline": "Balanced for everyday queries, summaries, and chat",
+                    "description": "Ultra-fast and intelligent model ideal for general assistant tasks.",
+                    "badge": "Popular",
+                    "speed": "Ultra Fast",
+                    "reasoning": "Standard",
+                    "contextWindow": "1M",
+                    "isAvailable": True,
+                },
+                {
+                    "id": "nexa-coder",
+                    "name": "Nexa Coder Pro",
+                    "tagline": "Specialized in full-stack code generation and debugging",
+                    "description": "Optimized for programming, script generation, and system design.",
+                    "badge": "Code",
+                    "speed": "Ultra Fast",
+                    "reasoning": "Advanced",
+                    "contextWindow": "1M",
+                    "isAvailable": True,
+                },
+            ]
+
         # Return standard NexaAI models mapped to backend OpenAI models
         return [
             {

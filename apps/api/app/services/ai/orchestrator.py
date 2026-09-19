@@ -338,7 +338,7 @@ class MultimodalAIOrchestrator:
                 await self.usage_service.log_usage(
                     user_id=user_id,
                     feature_type="chat",
-                    provider=getattr(provider, "provider_name", "openai"),
+                    provider=getattr(provider, "provider_name", getattr(settings, "AI_PROVIDER", "gemini")),
                     model_name=effective_model,
                     prompt_tokens=input_tokens,
                     completion_tokens=output_tokens,
