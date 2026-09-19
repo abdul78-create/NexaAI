@@ -8,6 +8,16 @@ from app.core.config import settings
 client = TestClient(app)
 
 
+def test_root_status_endpoint():
+    """Verify that root / returns 200 OK and valid application info."""
+    response = client.get("/")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == settings.APP_NAME
+    assert data["status"] == "online"
+    assert data["documentation"] == "/docs"
+
+
 def test_root_health_endpoint():
     """Verify that root /health returns 200 OK and valid health metadata."""
     response = client.get("/health")

@@ -141,7 +141,21 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     )
 
 
-# 6. Include Direct /health endpoints (accessible both at root and /api/v1)
+# 6. Root & Health endpoints
+@app.get("/", summary="NexaAI API Root", tags=["Root"])
+@app.head("/", include_in_schema=False)
+async def root_status():
+    """Root metadata endpoint verifying that NexaAI API is running."""
+    return {
+        "name": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "environment": settings.APP_ENV,
+        "status": "online",
+        "documentation": "/docs",
+        "health_check": "/health",
+    }
+
+
 app.include_router(health_direct_router)
 
 # 7. Include Versioned API Routes (/api/v1/...)
