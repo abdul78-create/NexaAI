@@ -85,6 +85,14 @@ class AuthService:
             HTTPException: 401 on invalid credentials, 403 if account disabled.
         """
         user = await cls.get_user_by_email(db, email)
+        if user and user.hashed_password is None:
+            providers = [oa.provider.capitalize() for oa in user.oauth_accounts]
+            prov_str = " or ".join(providers) if providers else "Google or GitHub"
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"This account was created via social login. Please sign in with {prov_str}.",
+            )
+
         if not user or not verify_password(password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -217,19 +225,26 @@ class AuthService:
         provider_account_id: str,
         email: Optional[str] = None,
         display_name: Optional[str] = None,
+        avatar_url: Optional[str] = None,
+        email_verified: bool = True,
     ) -> User:
         """Create or link a user authenticated via OAuth provider.
 
-        1. Check if OAuthAccount exists -> return linked user.
-        2. If not, check if User with matching email exists -> link OAuthAccount.
-        3. If no matching user, create new User (without password) + OAuthAccount.
+        1. Check if OAuthAccount exists -> return linked user (sync avatar if not set).
+        2. Require email verification before linking to existing User or creating new.
+        3. If User with matching email exists -> link OAuthAccount without duplicating user.
+        4. If no matching user -> create new User (hashed_password=None) + OAuthAccount.
+        5. Populate avatar_url from provider if user has no avatar yet.
         """
+        norm_provider = provider.lower()
+        target_email = email.strip().lower() if email else None
+
         # 1. Check existing OAuth link
         stmt = (
             select(OAuthAccount)
             .where(
-                OAuthAccount.provider == provider,
-                OAuthAccount.provider_account_id == provider_account_id,
+                OAuthAccount.provider == norm_provider,
+                OAuthAccount.provider_account_id == str(provider_account_id),
             )
             .options(selectinload(OAuthAccount.user))
         )
@@ -243,16 +258,23 @@ class AuthService:
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="User account is deactivated.",
                 )
-            if email and not oauth_acc.provider_email:
-                oauth_acc.provider_email = email.strip().lower()
-                await db.commit()
+            if target_email and not oauth_acc.provider_email:
+                oauth_acc.provider_email = target_email
+            # Avatar sync: populate if user currently has no avatar
+            if avatar_url and not user.avatar_url:
+                user.avatar_url = avatar_url
+            await db.commit()
             return user
 
-        # 2. Check if user with matching email already exists
-        target_email = email.strip().lower() if email else None
-        user: Optional[User] = None
-        if target_email:
-            user = await cls.get_user_by_email(db, target_email)
+        # 2. Check email verification before linking or creating
+        if not target_email or not email_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A verified email address is required to sign in with OAuth.",
+            )
+
+        # 3. Check if user with matching email already exists
+        user = await cls.get_user_by_email(db, target_email)
 
         if user:
             if not user.is_active:
@@ -260,14 +282,19 @@ class AuthService:
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="User account is deactivated.",
                 )
+            # Link to existing user without creating duplicate
+            if avatar_url and not user.avatar_url:
+                user.avatar_url = avatar_url
+            if not user.is_verified:
+                user.is_verified = True
         else:
-            # 3. Create new User
-            effective_email = target_email or f"{provider}_{provider_account_id}@oauth.local"
-            effective_name = display_name.strip() if display_name else f"{provider.capitalize()} User"
+            # 4. Create new User with hashed_password=None
+            effective_name = display_name.strip() if display_name else target_email.split("@")[0]
             user = User(
-                email=effective_email,
+                email=target_email,
                 hashed_password=None,
                 display_name=effective_name,
+                avatar_url=avatar_url,
                 is_active=True,
                 is_verified=True,
             )
@@ -277,8 +304,8 @@ class AuthService:
         # Link new OAuthAccount
         new_oauth = OAuthAccount(
             user_id=user.id,
-            provider=provider,
-            provider_account_id=provider_account_id,
+            provider=norm_provider,
+            provider_account_id=str(provider_account_id),
             provider_email=target_email,
         )
         db.add(new_oauth)

@@ -1,9 +1,8 @@
 """OAuth API endpoints for Google and GitHub authentication."""
 
 import logging
-import secrets
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +16,7 @@ from app.schemas.oauth import (
 )
 from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
-from app.services.oauth_service import OAuthService
+from app.services.oauth_service import OAuthService, get_oauth_cookie_kwargs
 
 logger = logging.getLogger(__name__)
 
@@ -53,20 +52,28 @@ async def list_providers() -> OAuthProvidersResponse:
     response_model=OAuthAuthorizeUrlResponse,
     summary="Get OAuth authorization URL for frontend redirect",
 )
-async def get_authorization_url(provider: str) -> OAuthAuthorizeUrlResponse:
-    """Generates an authorization URL for the specified provider (google or github)."""
+async def get_authorization_url(provider: str, response: Response) -> OAuthAuthorizeUrlResponse:
+    """Generates an authorization URL for the specified provider (google or github) and sets a state cookie."""
     normalized_provider = provider.lower()
-    state = secrets.token_urlsafe(32)
-
-    if normalized_provider == "google":
-        url = OAuthService.get_google_auth_url(state)
-    elif normalized_provider == "github":
-        url = OAuthService.get_github_auth_url(state)
-    else:
+    if normalized_provider not in ("google", "github"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported OAuth provider '{provider}'. Supported: google, github",
         )
+
+    state = OAuthService.generate_oauth_state(normalized_provider)
+
+    if normalized_provider == "google":
+        url = OAuthService.get_google_auth_url(state)
+    else:
+        url = OAuthService.get_github_auth_url(state)
+
+    # Set CSRF protection state cookie
+    response.set_cookie(
+        key="nexaai_oauth_state",
+        value=state,
+        **get_oauth_cookie_kwargs(),
+    )
 
     return OAuthAuthorizeUrlResponse(provider=normalized_provider, url=url, state=state)
 
@@ -76,21 +83,28 @@ async def get_authorization_url(provider: str) -> OAuthAuthorizeUrlResponse:
     summary="Direct browser redirect to OAuth provider",
 )
 async def redirect_to_provider(provider: str) -> RedirectResponse:
-    """Redirects the browser directly to the third-party OAuth provider login."""
+    """Redirects the browser directly to the third-party OAuth provider login with state cookie."""
     normalized_provider = provider.lower()
-    state = secrets.token_urlsafe(32)
+    if normalized_provider not in ("google", "github"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported OAuth provider '{provider}'. Supported: google, github",
+        )
+
+    state = OAuthService.generate_oauth_state(normalized_provider)
 
     if normalized_provider == "google":
         url = OAuthService.get_google_auth_url(state)
-    elif normalized_provider == "github":
-        url = OAuthService.get_github_auth_url(state)
     else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported OAuth provider '{provider}'.",
-        )
+        url = OAuthService.get_github_auth_url(state)
 
-    return RedirectResponse(url=url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+    redirect_resp = RedirectResponse(url=url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+    redirect_resp.set_cookie(
+        key="nexaai_oauth_state",
+        value=state,
+        **get_oauth_cookie_kwargs(),
+    )
+    return redirect_resp
 
 
 @router.post(
@@ -100,6 +114,7 @@ async def redirect_to_provider(provider: str) -> RedirectResponse:
 )
 async def oauth_callback(
     data: OAuthCallbackRequest,
+    request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
@@ -108,7 +123,23 @@ async def oauth_callback(
     and returns a JWT token pair with an HTTP-only refresh cookie.
     """
     provider = data.provider.lower()
+    cookie_state = request.cookies.get("nexaai_oauth_state")
 
+    # 1. Verify CSRF State
+    OAuthService.verify_oauth_state(
+        state=data.state,
+        expected_provider=provider,
+        cookie_state=cookie_state,
+    )
+
+    # 2. Clear state cookie after successful verification
+    response.delete_cookie(
+        key="nexaai_oauth_state",
+        path="/",
+        domain=settings.COOKIE_DOMAIN,
+    )
+
+    # 3. Handle provider code exchange & user profile
     if provider == "google":
         profile = await OAuthService.handle_google_callback(data.code)
     elif provider == "github":
@@ -119,14 +150,18 @@ async def oauth_callback(
             detail=f"Unsupported OAuth provider '{data.provider}'.",
         )
 
+    # 4. Link or create user with avatar synchronization and verified email check
     user = await AuthService.create_or_link_oauth_user(
         db=db,
         provider=profile["provider"],
         provider_account_id=profile["provider_account_id"],
         email=profile.get("email"),
         display_name=profile.get("display_name"),
+        avatar_url=profile.get("avatar_url"),
+        email_verified=profile.get("email_verified", True),
     )
 
+    # 5. Issue JWT and refresh token
     access_token, raw_refresh, expires_in = await AuthService.create_session_tokens(
         db,
         user,
@@ -148,12 +183,21 @@ async def oauth_callback(
 )
 async def direct_oauth_callback(
     provider: str,
+    request: Request,
     code: str = Query(...),
     state: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
     """Handles direct browser callback from OAuth providers and redirects to the frontend app."""
     norm_provider = provider.lower()
+    cookie_state = request.cookies.get("nexaai_oauth_state")
+
+    # Verify CSRF State
+    OAuthService.verify_oauth_state(
+        state=state,
+        expected_provider=norm_provider,
+        cookie_state=cookie_state,
+    )
 
     if norm_provider == "google":
         profile = await OAuthService.handle_google_callback(code)
@@ -171,6 +215,8 @@ async def direct_oauth_callback(
         provider_account_id=profile["provider_account_id"],
         email=profile.get("email"),
         display_name=profile.get("display_name"),
+        avatar_url=profile.get("avatar_url"),
+        email_verified=profile.get("email_verified", True),
     )
 
     access_token, raw_refresh, _ = await AuthService.create_session_tokens(
@@ -180,5 +226,6 @@ async def direct_oauth_callback(
 
     target_url = f"{settings.AUTH_FRONTEND_URL.rstrip('/')}/app?token={access_token}"
     response = RedirectResponse(url=target_url, status_code=status.HTTP_302_FOUND)
+    response.delete_cookie(key="nexaai_oauth_state", path="/", domain=settings.COOKIE_DOMAIN)
     _set_refresh_cookie(response, raw_refresh)
     return response

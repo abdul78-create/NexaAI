@@ -1,6 +1,8 @@
-"""OAuth service for handling third-party authentication flows (Google, GitHub)."""
-
+import hashlib
+import hmac
 import logging
+import secrets
+import time
 from typing import Any, Dict, Optional
 import httpx
 from fastapi import HTTPException, status
@@ -9,9 +11,116 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+STATE_EXPIRATION_SECONDS = 600  # 10 minutes
+
+
+def get_oauth_cookie_kwargs() -> Dict[str, Any]:
+    """Return cookie kwargs appropriate for local dev or cross-domain production."""
+    if settings.COOKIE_SECURE or settings.APP_ENV == "production":
+        samesite = "none"
+        secure = True
+    else:
+        samesite = settings.COOKIE_SAMESITE or "lax"
+        secure = settings.COOKIE_SECURE
+
+    return {
+        "max_age": STATE_EXPIRATION_SECONDS,
+        "httponly": True,
+        "secure": secure,
+        "samesite": samesite,
+        "domain": settings.COOKIE_DOMAIN,
+        "path": "/",
+    }
+
 
 class OAuthService:
-    """Handles OAuth 2.0 URL generation, token exchanges, and profile fetching."""
+    """Handles OAuth 2.0 URL generation, token exchanges, profile fetching, and CSRF protection."""
+
+    # ── CSRF State Management ─────────────────────────────────────────────
+
+    @classmethod
+    def generate_oauth_state(cls, provider: str) -> str:
+        """Generate a cryptographically signed state token.
+
+        Format: {provider}.{nonce}.{timestamp}.{signature}
+        """
+        nonce = secrets.token_urlsafe(24)
+        timestamp = int(time.time())
+        payload = f"{provider.lower()}:{nonce}:{timestamp}"
+        signature = hmac.new(
+            settings.SECRET_KEY.encode("utf-8"),
+            payload.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        return f"{provider.lower()}.{nonce}.{timestamp}.{signature}"
+
+    @classmethod
+    def verify_oauth_state(
+        cls,
+        state: Optional[str],
+        expected_provider: str,
+        cookie_state: Optional[str] = None,
+    ) -> bool:
+        """Verify an OAuth state token against signature, provider, timestamp, and browser cookie.
+
+        Raises:
+            HTTPException: 400 if state is missing, malformed, mismatched, expired, or tampered.
+        """
+        if not state:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Missing OAuth state parameter.",
+            )
+
+        if cookie_state and not hmac.compare_digest(state, cookie_state):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OAuth state does not match browser session.",
+            )
+
+        parts = state.split(".")
+        if len(parts) != 4:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Malformed OAuth state parameter.",
+            )
+
+        provider, nonce, ts_str, signature = parts
+        if provider.lower() != expected_provider.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"OAuth state provider mismatch: expected {expected_provider}, got {provider}.",
+            )
+
+        try:
+            timestamp = int(ts_str)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid timestamp in OAuth state parameter.",
+            )
+
+        now = int(time.time())
+        if now - timestamp > STATE_EXPIRATION_SECONDS or timestamp > now + 60:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OAuth state parameter has expired. Please try signing in again.",
+            )
+
+        expected_payload = f"{provider.lower()}:{nonce}:{timestamp}"
+        expected_sig = hmac.new(
+            settings.SECRET_KEY.encode("utf-8"),
+            expected_payload.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+
+        if not hmac.compare_digest(signature, expected_sig):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid OAuth state signature.",
+            )
+
+        return True
 
     # ── Configuration checks ──────────────────────────────────────────────
 
@@ -89,7 +198,7 @@ class OAuthService:
 
     @classmethod
     async def handle_google_callback(cls, code: str) -> Dict[str, Any]:
-        """Exchange Google authorization code for user profile."""
+        """Exchange Google authorization code for user profile with verified email."""
         if not cls.is_google_configured():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -114,7 +223,7 @@ class OAuthService:
                 logger.error(f"Google token exchange failed: {token_resp.text}")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Failed to authenticate with Google. Invalid code.",
+                    detail="Failed to authenticate with Google. Invalid or expired code.",
                 )
 
             tokens = token_resp.json()
@@ -138,17 +247,35 @@ class OAuthService:
 
             profile = profile_resp.json()
 
+        email = profile.get("email")
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Google did not provide an email address.",
+            )
+
+        email_verified = profile.get("email_verified", False)
+        if isinstance(email_verified, str):
+            email_verified = email_verified.lower() == "true"
+
+        if not email_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Google account email is not verified. Please verify your email with Google first.",
+            )
+
         return {
             "provider": "google",
             "provider_account_id": str(profile.get("sub")),
-            "email": profile.get("email"),
-            "display_name": profile.get("name") or profile.get("email", "").split("@")[0],
+            "email": email.strip().lower(),
+            "email_verified": True,
+            "display_name": profile.get("name") or email.split("@")[0],
             "avatar_url": profile.get("picture"),
         }
 
     @classmethod
     async def handle_github_callback(cls, code: str) -> Dict[str, Any]:
-        """Exchange GitHub authorization code for user profile."""
+        """Exchange GitHub authorization code for user profile with verified email."""
         if not cls.is_github_configured():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -173,7 +300,7 @@ class OAuthService:
                 logger.error(f"GitHub token exchange failed: {token_resp.text}")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Failed to authenticate with GitHub. Invalid code.",
+                    detail="Failed to authenticate with GitHub. Invalid or expired code.",
                 )
 
             tokens = token_resp.json()
@@ -199,24 +326,36 @@ class OAuthService:
                 )
 
             profile = profile_resp.json()
-            email = profile.get("email")
 
-            # If email is private on GitHub, fetch from user/emails endpoint
-            if not email:
-                emails_resp = await client.get("https://api.github.com/user/emails", headers=headers)
-                if emails_resp.status_code == 200:
-                    emails_data = emails_resp.json()
+            # GitHub email verification: Always inspect /user/emails for verified status
+            verified_email = None
+            emails_resp = await client.get("https://api.github.com/user/emails", headers=headers)
+            if emails_resp.status_code == 200:
+                emails_data = emails_resp.json()
+                if isinstance(emails_data, list):
+                    # Priority 1: primary and verified
                     for em in emails_data:
-                        if em.get("primary") and em.get("verified"):
-                            email = em.get("email")
+                        if em.get("primary") and em.get("verified") and em.get("email"):
+                            verified_email = em.get("email").strip().lower()
                             break
-                    if not email and emails_data:
-                        email = emails_data[0].get("email")
+                    # Priority 2: any verified email
+                    if not verified_email:
+                        for em in emails_data:
+                            if em.get("verified") and em.get("email"):
+                                verified_email = em.get("email").strip().lower()
+                                break
+
+            if not verified_email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No verified email address found on your GitHub account. Please add and verify an email on GitHub.",
+                )
 
         return {
             "provider": "github",
             "provider_account_id": str(profile.get("id")),
-            "email": email,
-            "display_name": profile.get("name") or profile.get("login"),
+            "email": verified_email,
+            "email_verified": True,
+            "display_name": profile.get("name") or profile.get("login") or verified_email.split("@")[0],
             "avatar_url": profile.get("avatar_url"),
         }

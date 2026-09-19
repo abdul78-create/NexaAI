@@ -17,13 +17,38 @@ function CallbackContent() {
 
   const [statusText, setStatusText] = useState('Verifying authentication credentials...')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isCancelled, setIsCancelled] = useState(false)
 
   useEffect(() => {
     async function processCallback() {
       const code = searchParams.get('code')
       const token = searchParams.get('token')
       const state = searchParams.get('state')
+      const error = searchParams.get('error')
+      const errorDesc = searchParams.get('error_description')
       let provider = searchParams.get('provider')
+
+      // Infer provider from pathname or query if not explicit
+      if (!provider) {
+        if (typeof window !== 'undefined' && window.location.pathname.includes('github')) {
+          provider = 'github'
+        } else {
+          provider = 'google'
+        }
+      }
+      const providerLabel = provider.charAt(0).toUpperCase() + provider.slice(1)
+
+      // Handle user cancellation or provider rejection
+      if (error === 'access_denied' || errorDesc?.toLowerCase().includes('access_denied')) {
+        setIsCancelled(true)
+        setErrorMessage(`Login cancelled. You chose not to sign in with ${providerLabel}.`)
+        return
+      }
+
+      if (error || errorDesc) {
+        setErrorMessage(errorDesc || error || 'Authentication could not be completed. Please try again.')
+        return
+      }
 
       // Case 1: Direct token provided in redirect
       if (token) {
@@ -35,22 +60,12 @@ function CallbackContent() {
 
       // Case 2: Code exchange required
       if (!code) {
-        const errorDesc = searchParams.get('error_description') || searchParams.get('error')
-        setErrorMessage(errorDesc || 'No authorization code or session token received.')
+        setErrorMessage('No authorization code or session token received from provider.')
         return
       }
 
-      // Infer provider from pathname or query if not explicit
-      if (!provider) {
-        if (window.location.pathname.includes('github')) {
-          provider = 'github'
-        } else {
-          provider = 'google'
-        }
-      }
-
       try {
-        setStatusText(`Connecting with ${provider.charAt(0).toUpperCase() + provider.slice(1)}...`)
+        setStatusText(`Connecting with ${providerLabel}...`)
         const res = await fetch(`${API_BASE}/auth/oauth/callback`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -64,14 +79,18 @@ function CallbackContent() {
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
-          throw new Error(errData.detail || 'OAuth authorization exchange failed.')
+          const detail = typeof errData.detail === 'string' ? errData.detail : 'OAuth authorization exchange failed.'
+          throw new Error(detail)
         }
 
         const data = await res.json()
         await setSession(data.access_token)
         router.push('/app')
       } catch (err: unknown) {
-        setErrorMessage(err instanceof Error ? err.message : 'Authentication failed.')
+        const rawMsg = err instanceof Error ? err.message : 'Authentication failed.'
+        // Never expose sensitive tokens or client secrets in the UI
+        const cleanMsg = rawMsg.replace(/(?:key|secret|token)=[a-zA-Z0-9_\-]+/gi, '[REDACTED]')
+        setErrorMessage(cleanMsg)
       }
     }
 
@@ -89,7 +108,7 @@ function CallbackContent() {
           <div className="space-y-4">
             <div className="flex items-center justify-center gap-2 text-destructive font-semibold">
               <AlertCircle className="size-5" />
-              <span>Authentication Error</span>
+              <span>{isCancelled ? 'Sign In Cancelled' : 'Authentication Error'}</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               {errorMessage}
@@ -97,7 +116,7 @@ function CallbackContent() {
             <div className="pt-2">
               <Link href="/login">
                 <Button variant="outline" className="w-full">
-                  Return to Login
+                  Back to Login
                 </Button>
               </Link>
             </div>
