@@ -4,6 +4,7 @@ import logging
 import secrets
 import time
 from typing import Any, Dict, Optional
+from urllib.parse import urlencode
 import httpx
 from fastapi import HTTPException, status
 
@@ -174,7 +175,7 @@ class OAuthService:
             "state": state,
             "prompt": "select_account",
         }
-        query = "&".join(f"{k}={httpx.URL('', params={k: v}).query.decode()}" for k, v in params.items())
+        query = urlencode(params)
         return f"https://accounts.google.com/o/oauth2/v2/auth?{query}"
 
     @classmethod
@@ -191,7 +192,7 @@ class OAuthService:
             "scope": "read:user user:email",
             "state": state,
         }
-        query = "&".join(f"{k}={httpx.URL('', params={k: v}).query.decode()}" for k, v in params.items())
+        query = urlencode(params)
         return f"https://github.com/login/oauth/authorize?{query}"
 
     # ── Code Exchange & Profile Fetching ──────────────────────────────────

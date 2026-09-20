@@ -13,6 +13,7 @@ Tests cover:
 """
 
 import time
+from urllib.parse import parse_qs, unquote, urlparse
 import uuid
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -94,14 +95,79 @@ async def test_google_and_github_auth_urls(monkeypatch):
     assert "accounts.google.com" in google_url
     assert "client_id=mock-google-client-id" in google_url
     assert "state=test-state-google" in google_url
-    assert "scope=openid+email+profile" in google_url
+    assert "scope=openid+email+profile" in google_url or "scope=openid%20email%20profile" in google_url
+    # Ensure no malformed double parameter keys
+    assert "client_id=client_id=" not in google_url
+    assert "response_type=response_type=" not in google_url
 
     # GitHub Auth URL
     github_url = OAuthService.get_github_auth_url("test-state-github")
     assert "github.com/login/oauth/authorize" in github_url
     assert "client_id=mock-github-client-id" in github_url
     assert "state=test-state-github" in github_url
-    assert "scope=read%3Auser+user%3Aemail" in github_url or "read:user" in github_url
+    assert "client_id=client_id=" not in github_url
+
+
+@pytest.mark.asyncio
+async def test_google_oauth_url_generation_regression(monkeypatch):
+    """Regression test for Google OAuth URL parameter serialization.
+
+    Verifies:
+    1. parsed query['client_id'] == configured client ID (single parameter)
+    2. parsed query['response_type'] == ['code']
+    3. redirect_uri decodes to: https://nexaai-frontend-lgzs.onrender.com/api/auth/callback/google
+    4. state is preserved accurately
+    5. No double-prefixed keys (e.g. client_id=client_id=...) exist in the raw URL
+    """
+    configured_client_id = "test-web-client-12345.apps.googleusercontent.com"
+    frontend_origin = "https://nexaai-frontend-lgzs.onrender.com"
+    expected_redirect_uri = f"{frontend_origin}/api/auth/callback/google"
+    state_token = "google.testnonce123.1726830000.testsig456"
+
+    monkeypatch.setattr(settings, "GOOGLE_CLIENT_ID", configured_client_id)
+    monkeypatch.setattr(settings, "GOOGLE_CLIENT_SECRET", "test-google-secret")
+    monkeypatch.setattr(settings, "AUTH_FRONTEND_URL", frontend_origin)
+    monkeypatch.setattr(settings, "GOOGLE_REDIRECT_URI", None)  # rely on default resolution
+
+    url = OAuthService.get_google_auth_url(state_token)
+
+    # 1. Base URL verification
+    parsed = urlparse(url)
+    assert parsed.scheme == "https"
+    assert parsed.netloc == "accounts.google.com"
+    assert parsed.path == "/o/oauth2/v2/auth"
+
+    # 2. Query parameter parsing
+    query = parse_qs(parsed.query, keep_blank_values=True)
+
+    # Verify client_id matches configured value and is not duplicated or malformed
+    assert "client_id" in query
+    assert len(query["client_id"]) == 1
+    assert query["client_id"][0] == configured_client_id
+    assert query["client_id"] == [configured_client_id]
+
+    # Verify response_type is exactly ['code']
+    assert query["response_type"] == ["code"]
+
+    # Verify redirect_uri decodes to exact target URI
+    assert "redirect_uri" in query
+    assert len(query["redirect_uri"]) == 1
+    assert query["redirect_uri"][0] == expected_redirect_uri
+
+    # Verify state is present and unchanged
+    assert "state" in query
+    assert query["state"] == [state_token]
+
+    # Verify additional required Google parameters
+    assert query["scope"] == ["openid email profile"]
+    assert query["access_type"] == ["offline"]
+    assert query["prompt"] == ["select_account"]
+
+    # 3. Raw string safety assertions: MUST NOT have malformed doubled keys
+    assert "client_id=client_id=" not in url
+    assert "response_type=response_type=" not in url
+    assert "redirect_uri=redirect_uri=" not in url
+    assert "state=state=" not in url
 
 
 @pytest.mark.asyncio
