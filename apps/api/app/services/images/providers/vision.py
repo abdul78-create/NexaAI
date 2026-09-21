@@ -79,6 +79,37 @@ class OpenAIVisionProvider(BaseVisionProvider):
             self.base_url = (base_url or settings.OPENAI_BASE_URL).rstrip("/")
             self.default_model = default_model or settings.VISION_MODEL or "gpt-4o"
 
+    def _resolve_model(self, model: Optional[str]) -> str:
+        if not model or model in ("default", ""):
+            return self.default_model
+        if self.provider_name == "gemini":
+            mapping = {
+                "nexa-standard": "gemini-2.5-flash",
+                "nexa-fast": "gemini-2.5-flash",
+                "nexa-coder": "gemini-2.5-flash",
+                "nexa-reasoning": "gemini-2.5-pro",
+                "nexa-pro": "gemini-2.5-pro",
+                "nexa-ultra": "gemini-2.5-pro",
+            }
+            if model in mapping:
+                return mapping[model]
+            if model.startswith("gemini-"):
+                return model
+            return self.default_model
+        mapping = {
+            "nexa-standard": "gpt-4o-mini",
+            "nexa-fast": "gpt-4o-mini",
+            "nexa-coder": "gpt-4o-mini",
+            "nexa-reasoning": "gpt-4o",
+            "nexa-pro": "gpt-4o",
+            "nexa-ultra": "gpt-4o",
+        }
+        if model in mapping:
+            return mapping[model]
+        if model.startswith("gpt-") or model.startswith("o1") or model.startswith("o3"):
+            return model
+        return self.default_model
+
     def _prepare_payload(self, image_bytes: bytes, prompt: str, model: str) -> Dict[str, Any]:
         meta = inspect_image(image_bytes)
 
@@ -91,7 +122,7 @@ class OpenAIVisionProvider(BaseVisionProvider):
         data_url = f"data:{meta.mime_type};base64,{b64_data}"
 
         return {
-            "model": model,
+            "model": self._resolve_model(model),
             "messages": [
                 {
                     "role": "user",

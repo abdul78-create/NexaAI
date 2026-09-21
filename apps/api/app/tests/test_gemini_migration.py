@@ -62,16 +62,21 @@ async def test_gemini_provider_factory_resolution(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_gemini_model_mapping():
-    """Verify Gemini and OpenAI alias mapping."""
     gemini_prov = OpenAIProvider(
         api_key="fake-gemini-key",
         base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
         provider_name="gemini",
     )
+    assert gemini_prov.base_url == "https://generativelanguage.googleapis.com/v1beta/openai/"
     assert gemini_prov._resolve_model("nexa-standard") == "gemini-2.5-flash"
+    assert gemini_prov._resolve_model("nexa-fast") == "gemini-2.5-flash"
     assert gemini_prov._resolve_model("nexa-coder") == "gemini-2.5-flash"
+    assert gemini_prov._resolve_model("nexa-reasoning") == "gemini-2.5-pro"
+    assert gemini_prov._resolve_model("nexa-pro") == "gemini-2.5-pro"
     assert gemini_prov._resolve_model("nexa-ultra") == "gemini-2.5-pro"
-    assert gemini_prov._resolve_model("custom-model") == "custom-model"
+    assert gemini_prov._resolve_model("gemini-2.5-flash") == "gemini-2.5-flash"
+    assert gemini_prov._resolve_model("gemini-2.5-pro") == "gemini-2.5-pro"
+    assert gemini_prov._resolve_model("unrecognized-alias") == "gemini-2.5-flash"
 
     openai_prov = OpenAIProvider(
         api_key="fake-openai-key",
@@ -79,6 +84,9 @@ async def test_gemini_model_mapping():
         provider_name="openai",
     )
     assert openai_prov._resolve_model("nexa-standard") == "gpt-4o-mini"
+    assert openai_prov._resolve_model("nexa-fast") == "gpt-4o-mini"
+    assert openai_prov._resolve_model("nexa-reasoning") == "gpt-4o"
+    assert openai_prov._resolve_model("nexa-pro") == "gpt-4o"
     assert openai_prov._resolve_model("nexa-ultra") == "gpt-4o"
 
 
@@ -133,10 +141,16 @@ async def test_gemini_stream_does_not_send_stream_options():
     async for _ in gemini_prov.stream(messages=messages, model="gemini-2.5-flash"):
         pass
 
-    assert "stream_options" not in captured_kwargs, (
-        "Gemini stream requests must NOT include stream_options"
-    )
+    assert "stream_options" not in captured_kwargs
     assert captured_kwargs.get("stream") is True
+    assert captured_kwargs.get("model") == "gemini-2.5-flash"
+
+    async for _ in gemini_prov.stream(messages=messages, model="nexa-reasoning"):
+        pass
+    assert captured_kwargs.get("model") == "gemini-2.5-pro"
+
+    async for _ in gemini_prov.stream(messages=messages, model="nexa-fast"):
+        pass
     assert captured_kwargs.get("model") == "gemini-2.5-flash"
 
     # Now verify that OpenAI requests DO include stream_options

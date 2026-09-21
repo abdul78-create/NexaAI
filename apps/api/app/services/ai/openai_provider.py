@@ -15,15 +15,21 @@ class OpenAIProvider(BaseAIProvider):
     """OpenAI-compatible AI Provider supporting Gemini, OpenAI, Ollama, vLLM, & Groq."""
 
     OPENAI_MODEL_MAP = {
-        "nexa-ultra": "gpt-4o",
         "nexa-standard": "gpt-4o-mini",
+        "nexa-fast": "gpt-4o-mini",
         "nexa-coder": "gpt-4o-mini",
+        "nexa-reasoning": "gpt-4o",
+        "nexa-pro": "gpt-4o",
+        "nexa-ultra": "gpt-4o",
     }
 
     GEMINI_MODEL_MAP = {
-        "nexa-ultra": "gemini-2.5-pro",
         "nexa-standard": "gemini-2.5-flash",
+        "nexa-fast": "gemini-2.5-flash",
         "nexa-coder": "gemini-2.5-flash",
+        "nexa-reasoning": "gemini-2.5-pro",
+        "nexa-pro": "gemini-2.5-pro",
+        "nexa-ultra": "gemini-2.5-pro",
     }
 
     def __init__(
@@ -35,10 +41,12 @@ class OpenAIProvider(BaseAIProvider):
         provider_name: Optional[str] = None,
     ):
         self.api_key = api_key
-        self.base_url = base_url.rstrip("/")
+        if base_url:
+            self.base_url = base_url if base_url.endswith("/") else f"{base_url}/"
+        else:
+            self.base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
         self.timeout = timeout
 
-        # Detect provider: explicitly set or inferred from base_url
         if provider_name:
             self.provider_name = provider_name.lower()
         elif "googleapis.com" in self.base_url.lower():
@@ -46,7 +54,6 @@ class OpenAIProvider(BaseAIProvider):
         else:
             self.provider_name = "openai"
 
-        # Resolve default model based on detected provider
         if default_model:
             self.default_model = default_model
         elif self.provider_name == "gemini":
@@ -60,10 +67,19 @@ class OpenAIProvider(BaseAIProvider):
             timeout=timeout,
         )
 
-    def _resolve_model(self, model: str) -> str:
-        """Resolve NexaAI UI model alias to backend provider model name."""
+    def _resolve_model(self, model: Optional[str]) -> str:
+        if not model or model in ("default", ""):
+            return self.default_model
         model_map = self.GEMINI_MODEL_MAP if self.provider_name == "gemini" else self.OPENAI_MODEL_MAP
-        return model_map.get(model, model or self.default_model)
+        if model in model_map:
+            return model_map[model]
+        if self.provider_name == "gemini" and model.startswith("gemini-"):
+            return model
+        if self.provider_name == "openai" and (
+            model.startswith("gpt-") or model.startswith("o1") or model.startswith("o3")
+        ):
+            return model
+        return self.default_model
 
     async def generate(
         self,

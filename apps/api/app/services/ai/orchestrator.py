@@ -189,9 +189,17 @@ class MultimodalAIOrchestrator:
                 yield format_sse("error", {"code": "HIGH_MODE_QUOTA_EXCEEDED", "message": str(err_msg)})
                 return
 
-        # Resolve effective model architecture based on chat mode
         effective_model = resolve_model_for_mode(canonical_mode)
-        if model_id and model_id not in ("nexa-standard", "nexa-fast", "default", ""):
+        if model_id and model_id not in (
+            "nexa-standard",
+            "nexa-fast",
+            "nexa-reasoning",
+            "nexa-pro",
+            "nexa-ultra",
+            "nexa-coder",
+            "default",
+            "",
+        ):
             effective_model = model_id
 
         # 2. Resolve or Create Conversation
