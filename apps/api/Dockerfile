@@ -30,16 +30,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN addgroup --system --gid 1001 appgroup && \
-    adduser --system --uid 1001 --ingroup appgroup appuser
+    adduser --system --uid 1001 --ingroup appgroup appuser && \
+    chown appuser:appgroup /app
 
 COPY --from=builder /app/deps /app/deps
 COPY --chown=appuser:appgroup . /app
 
 USER appuser
 
-EXPOSE 8000
+EXPOSE 10000
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-  CMD curl -f http://localhost:${PORT:-8000}/health/liveness || exit 1
+  CMD curl -f http://127.0.0.1:${PORT:-8000}/health/liveness || exit 1
 
 CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
