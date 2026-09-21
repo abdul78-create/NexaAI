@@ -1,9 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Paperclip, Loader2, Trash2 } from 'lucide-react'
+import { Paperclip, Loader2 } from 'lucide-react'
 import type { AttachmentItem, AttachmentMediaType } from '@/lib/attachments-api'
-import { formatFileSize } from '@/lib/attachments-api'
 import { AttachmentPreview } from './AttachmentPreview'
 
 interface AttachmentListProps {

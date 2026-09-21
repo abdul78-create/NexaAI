@@ -75,20 +75,6 @@ async function handleJsonResponse<T>(res: Response): Promise<T> {
   return res.json()
 }
 
-/** Guest mode mock document generator */
-const MOCK_GUEST_DOCS: DocumentItem[] = [
-  {
-    id: 'doc-guest-sample-1',
-    user_id: 'guest',
-    filename: 'NexaAI_Architecture_Guide.pdf',
-    file_type: 'PDF',
-    file_size: 1048576,
-    status: 'indexed',
-    chunk_count: 6,
-    created_at: new Date().toISOString(),
-  },
-]
-
 export async function uploadDocumentApi(token: string | null, file: File): Promise<DocumentItem> {
   if (!token) {
     // Guest mode fallback

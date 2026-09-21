@@ -26,8 +26,7 @@ export function OAuthButtons() {
 
   const handleOAuthLogin = (provider: 'google' | 'github') => {
     setIsLoading(provider)
-    // Direct redirect to backend endpoint which generates state and redirects to provider
-    window.location.href = `${API_BASE}/auth/oauth/${provider}`
+    window.location.assign(new URL(`${API_BASE}/auth/oauth/${provider}`, window.location.origin).href)
   }
 
   const isGoogleAvailable = configuredProviders.includes('google')

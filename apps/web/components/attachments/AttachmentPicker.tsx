@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useRef, useState } from 'react'
-import { Upload, Image as ImageIcon, FileText, Music, X } from 'lucide-react'
+import { Upload } from 'lucide-react'
 import type { AttachmentMediaType } from '@/lib/attachments-api'
 
 export interface PickedFile {

@@ -79,7 +79,7 @@ export const SpeechWorkspace: React.FC = () => {
     }
   }
 
-  const handleRecordingComplete = (blob: Blob, durationSeconds: number) => {
+  const handleRecordingComplete = (blob: Blob) => {
     const filename = `recording_${new Date().toISOString().slice(0, 19).replace(/[: shadow-]/g, '')}.webm`
     processAudioSource(blob, filename, blob.type || 'audio/webm')
   }

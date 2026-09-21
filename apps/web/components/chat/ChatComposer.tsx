@@ -52,7 +52,7 @@ export function ChatComposer({
         setContent(pending)
         sessionStorage.removeItem('nexaai_pending_chat_input')
       }
-    } catch (e) {
+    } catch {
       // Ignore SSR / sessionStorage errors
     }
   }, [])

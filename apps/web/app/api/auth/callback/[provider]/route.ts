@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 /**
  * Resolves a trusted, public application origin for OAuth redirects.
  *
- * Prevents container-internal bind host leakage (e.g. 0.0.0.0:10000 on Render)
+ * Prevents container-internal bind host leakage (e.g. 0.0.0.0:10000)
  * and open redirect vulnerabilities.
  */
 export function resolvePublicOrigin(request: NextRequest): string {
@@ -19,7 +19,7 @@ export function resolvePublicOrigin(request: NextRequest): string {
     }
   }
 
-  // 2. Reverse proxy headers (e.g. Render / Cloudflare / Nginx)
+  // 2. Reverse proxy headers (e.g. Cloudflare / Nginx / Load Balancer)
   const forwardedHost = request.headers.get('x-forwarded-host')
   const forwardedProto = request.headers.get('x-forwarded-proto') || 'https'
   const rawHost = forwardedHost || request.headers.get('host')
@@ -42,8 +42,8 @@ export function resolvePublicOrigin(request: NextRequest): string {
     return nextOrigin
   }
 
-  // 4. Default safe production fallback
-  return 'https://nexaai-frontend-lgzs.onrender.com'
+  // 4. Default safe fallback
+  return 'http://localhost:3000'
 }
 
 export async function GET(

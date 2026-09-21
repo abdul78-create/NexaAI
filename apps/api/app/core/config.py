@@ -1,8 +1,8 @@
-"""Application settings and configuration management via Pydantic."""
-
+import os
 from typing import List, Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 
 def _parse_list_or_str(v: Union[str, List[str]], default_if_empty: Optional[List[str]] = None) -> List[str]:
@@ -125,7 +125,10 @@ class Settings(BaseSettings):
 
     # Storage provider: "local" only for now; extend to "s3" in Phase 18
     STORAGE_PROVIDER: str = "local"
-    UPLOAD_DIR: str = "uploads"
+    UPLOAD_DIR: str = Field(
+        default="/tmp/uploads" if (os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME")) else "uploads",
+        description="Local storage directory for uploads. Defaults to /tmp/uploads in serverless environments, or 'uploads' locally. Overridable via UPLOAD_DIR environment variable.",
+    )
 
     # Global size limits (MB)
     MAX_UPLOAD_SIZE_MB: int = 25

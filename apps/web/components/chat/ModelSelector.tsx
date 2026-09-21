@@ -79,7 +79,6 @@ const MODES_CONFIG: Record<
 }
 
 export function ModelSelector({
-  selectedModelId,
   onSelectModel,
   disabled,
   className,

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { MessageSquare, Send, Sparkles, Loader2, Bot, User } from 'lucide-react'
+import { Send, Sparkles, Loader2, Bot, User } from 'lucide-react'
 import { RAGQueryResponse } from '@/lib/documents-api'
 import { SourceCitation } from '@/components/documents/SourceCitation'
 import { Button } from '@/components/ui/button'

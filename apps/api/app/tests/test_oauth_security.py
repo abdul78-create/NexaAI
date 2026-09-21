@@ -115,12 +115,12 @@ async def test_google_oauth_url_generation_regression(monkeypatch):
     Verifies:
     1. parsed query['client_id'] == configured client ID (single parameter)
     2. parsed query['response_type'] == ['code']
-    3. redirect_uri decodes to: https://nexaai-frontend-lgzs.onrender.com/api/auth/callback/google
+    3. redirect_uri decodes to: https://app.nexaai.com/api/auth/callback/google
     4. state is preserved accurately
     5. No double-prefixed keys (e.g. client_id=client_id=...) exist in the raw URL
     """
     configured_client_id = "test-web-client-12345.apps.googleusercontent.com"
-    frontend_origin = "https://nexaai-frontend-lgzs.onrender.com"
+    frontend_origin = "https://app.nexaai.com"
     expected_redirect_uri = f"{frontend_origin}/api/auth/callback/google"
     state_token = "google.testnonce123.1726830000.testsig456"
 

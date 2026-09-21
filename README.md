@@ -12,11 +12,11 @@
   <img src="https://img.shields.io/badge/Next.js-14_App_Router-000000?style=flat-square&logo=next.js&logoColor=white" alt="Next.js 14"/>
   <img src="https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI"/>
   <img src="https://img.shields.io/badge/PostgreSQL-16_+_pgvector-336791?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL 16"/>
-  <img src="https://img.shields.io/badge/Tests-134%20Passing-22c55e?style=flat-square" alt="134 Tests Passing"/>
+  <img src="https://img.shields.io/badge/Tests-135%20Passing-22c55e?style=flat-square" alt="135 Tests Passing"/>
   <img src="https://img.shields.io/badge/License-MIT-a855f7?style=flat-square" alt="MIT License"/>
 </p>
 
-[**🌐 Live Application**](https://nexaai-frontend-lgzs.onrender.com) · [**📚 Interactive API Docs**](https://nexaai.onrender.com/docs) · [**🏗️ Architecture Spec**](docs/ARCHITECTURE.md)
+[**🏗️ Architecture Spec**](docs/ARCHITECTURE.md) · [**📚 API Documentation**](docs/API.md) · [**⚡ Development Guide**](docs/DEVELOPMENT.md)
 
 </div>
 

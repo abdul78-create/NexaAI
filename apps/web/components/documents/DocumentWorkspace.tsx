@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { FileText, Layers, Search, Sparkles, CheckCircle2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import {
@@ -33,13 +33,7 @@ export function DocumentWorkspace() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (isAuthenticated && token) {
-      loadDocuments()
-    }
-  }, [isAuthenticated, token])
-
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     if (!token) return
     try {
       const docs = await fetchDocuments(token)
@@ -47,7 +41,13 @@ export function DocumentWorkspace() {
     } catch {
       // Ignore
     }
-  }
+  }, [token])
+
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      loadDocuments()
+    }
+  }, [isAuthenticated, token, loadDocuments])
 
   const handleUpload = async (file: File) => {
     setIsUploading(true)

@@ -1,8 +1,7 @@
 'use client'
 
-import React from 'react'
-import { AttachmentItem } from '@/lib/attachments-api'
-import { X, FileText, FileAudio, ImageIcon, Loader2, AlertCircle } from 'lucide-react'
+import type { AttachmentItem } from '@/lib/attachments-api'
+import { X, FileText, FileAudio, Loader2, AlertCircle } from 'lucide-react'
 
 export interface PendingAttachment {
   id: string

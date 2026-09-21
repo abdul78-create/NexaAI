@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, MessageSquare, FileText, Calendar, Filter, ArrowRight, Loader2, Key } from "lucide-react";
+import { Search, X, MessageSquare, FileText, Filter, Loader2 } from "lucide-react";
 import { searchGlobal, SearchResultItem, SearchResponse } from "@/lib/search-api";
 
 interface GlobalSearchDialogProps {

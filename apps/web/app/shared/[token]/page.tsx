@@ -8,12 +8,10 @@ import {
   Share2,
   Lock,
   Calendar,
-  Clock,
   AlertCircle,
   FileText,
   User,
   Bot,
-  ExternalLink,
 } from "lucide-react";
 import { getPublicSharedView, PublicShareView } from "@/lib/share-api";
 

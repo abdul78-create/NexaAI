@@ -7,7 +7,6 @@ import {
   MessageSquareDashed,
   Pin,
   FolderPlus,
-  Folder as FolderIcon,
   Archive,
   Trash2,
   ChevronDown,
@@ -18,7 +17,6 @@ import { ConversationItem } from '@/components/chat/ConversationItem'
 import { FolderItem } from '@/components/folders/FolderItem'
 import { FolderDialog } from '@/components/folders/FolderDialog'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { WorkspaceView } from '@/stores/chat-store'
 
 interface ConversationListProps {

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { TimeseriesDataPoint } from '@/lib/usage-api'
-import { TrendingUp, BarChart2 } from 'lucide-react'
+import { TrendingUp } from 'lucide-react'
 
 interface UsageTimeseriesChartProps {
   data: TimeseriesDataPoint[]

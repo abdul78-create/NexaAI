@@ -263,5 +263,5 @@ Client ◄── { sentiment, entities, intent, summary, readability }
 | Local file uploads | S3 / GCS object storage |
 | In-process NLP | Celery task queue |
 | Single DB instance | Read replicas + connection pooling (PgBouncer) |
-| No CDN | Vercel / Cloudflare for frontend |
+| No CDN | Cloudflare / Edge CDN for frontend |
 | Redis optional | Redis for session store + rate limiting + pub/sub |

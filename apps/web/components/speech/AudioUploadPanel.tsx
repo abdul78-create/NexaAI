@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef, useState } from 'react'
-import { Upload, FileAudio, AlertCircle } from 'lucide-react'
+import { FileAudio, AlertCircle } from 'lucide-react'
 
 interface AudioUploadPanelProps {
   onFileSelect: (file: File) => void

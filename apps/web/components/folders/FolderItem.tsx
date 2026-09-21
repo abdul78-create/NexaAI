@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react'
 import {
-  Folder as FolderIcon,
   ChevronRight,
   MoreVertical,
   Pencil,

@@ -9,7 +9,7 @@ import { useGSAP } from '@gsap/react'
 import {
   ArrowRight, Sparkles, Zap, Brain, FileText, BarChart3,
   ChevronRight, Code2, MessageSquare, CheckCircle2,
-  Terminal, GitBranch, Layers, Mic, Image as ImageIcon,
+  GitBranch, Layers, Mic, Image as ImageIcon,
   ShieldCheck, Cpu, Activity, Lock, Database, Server,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'

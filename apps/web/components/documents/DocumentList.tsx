@@ -4,7 +4,6 @@ import React from 'react'
 import { FileText, Trash2, Eye, CheckCircle2, AlertCircle, Clock, Layers } from 'lucide-react'
 import { DocumentItem } from '@/lib/documents-api'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 
 interface DocumentListProps {
   documents: DocumentItem[]

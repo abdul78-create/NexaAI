@@ -70,7 +70,6 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
     setSearchQuery,
     createNewChat,
     selectConversation,
-    deleteConversation,
     renameConversation,
     togglePinConversation,
     toggleArchiveConversation,

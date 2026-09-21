@@ -24,7 +24,6 @@ interface MessageActionsProps {
 export function MessageActions({
   content,
   role,
-  isLastAssistantMessage,
   isStreaming,
   onRegenerate,
   onEdit,

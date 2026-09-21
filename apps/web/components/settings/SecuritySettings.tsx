@@ -28,7 +28,7 @@ export const SecuritySettings: React.FC = () => {
 
   const handleConnectProvider = (provider: 'google' | 'github') => {
     const apiBase = getApiBaseUrl()
-    window.location.href = `${apiBase}/auth/oauth/url?provider=${provider}`
+    window.location.assign(new URL(`${apiBase}/auth/oauth/url?provider=${provider}`, window.location.origin).href)
   }
 
   const linkedProviders = user?.oauthProviders || []

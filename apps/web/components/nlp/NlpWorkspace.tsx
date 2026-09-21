@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   FlaskConical,
   History,
@@ -41,14 +41,7 @@ export function NlpWorkspace() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Load history on mount if authenticated
-  useEffect(() => {
-    if (isAuthenticated && token) {
-      loadHistory()
-    }
-  }, [isAuthenticated, token])
-
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     if (!token) return
     try {
       const items = await fetchNlpHistory(token)
@@ -56,7 +49,14 @@ export function NlpWorkspace() {
     } catch {
       // Ignore
     }
-  }
+  }, [token])
+
+  // Load history on mount if authenticated
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      loadHistory()
+    }
+  }, [isAuthenticated, token, loadHistory])
 
   const handleAnalyze = async (text: string) => {
     setIsLoading(true)
