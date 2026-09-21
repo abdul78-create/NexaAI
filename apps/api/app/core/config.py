@@ -90,17 +90,15 @@ class Settings(BaseSettings):
 
     @field_validator("DATABASE_URL", mode="after")
     @classmethod
-    def normalize_database_url(cls, v: Union[str, None]) -> str:
-        if not v or not isinstance(v, str):
-            return "sqlite+aiosqlite:///./nexaai.db"
-        v_str = v.strip().strip("'\"").strip()
-        if not v_str or v_str.lower() in ("none", "null", "undefined", '""', "''"):
-            return "sqlite+aiosqlite:///./nexaai.db"
-        if v_str.startswith("postgres://"):
-            v_str = "postgresql+asyncpg://" + v_str[len("postgres://"):]
-        elif v_str.startswith("postgresql://") and not v_str.startswith("postgresql+asyncpg://"):
-            v_str = "postgresql+asyncpg://" + v_str[len("postgresql://"):]
-        return v_str
+    def normalize_database_url(cls, v: str) -> str:
+        if isinstance(v, str):
+            v_str = v.strip()
+            if v_str.startswith("postgres://"):
+                return "postgresql+asyncpg://" + v_str[len("postgres://"):]
+            if v_str.startswith("postgresql://") and not v_str.startswith("postgresql+asyncpg://"):
+                return "postgresql+asyncpg://" + v_str[len("postgresql://"):]
+            return v_str
+        return v
 
     DB_POOL_SIZE: int = 5
     DB_MAX_OVERFLOW: int = 10
