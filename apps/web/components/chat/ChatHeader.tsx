@@ -4,15 +4,14 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import {
   Menu,
-  Home,
   Trash2,
   Sparkles,
   Share2,
+  Cpu,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Badge } from '@/components/ui/badge'
 import { ExportMenu } from '@/components/chat/ExportMenu'
 import { ShareDialog } from '@/components/chat/ShareDialog'
 
@@ -36,43 +35,46 @@ export function ChatHeader({
   const [isShareOpen, setIsShareOpen] = useState(false)
 
   return (
-    <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-white/6 bg-background/80 backdrop-blur-md px-4 gap-3 z-10">
+    <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-white/[0.05] bg-background/75 backdrop-blur-xl px-4 gap-3 z-10 relative">
+      {/* Subtle bottom gradient separator */}
+      <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+
       {/* Left: Mobile menu toggle + Title + Model Badge */}
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-2.5 min-w-0">
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden size-8 text-muted-foreground hover:text-foreground"
+          className="md:hidden size-8 text-muted-foreground hover:text-foreground rounded-lg"
           onClick={onToggleMobileMenu}
           aria-label="Toggle navigation menu"
         >
           <Menu className="size-4" />
         </Button>
 
-        <div className="flex items-center gap-2 min-w-0">
-          <h1 className="text-sm font-semibold text-foreground truncate max-w-[200px] sm:max-w-md">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <h1 className="text-sm font-semibold text-foreground truncate max-w-[180px] sm:max-w-sm">
             {title}
           </h1>
-          <Badge
-            variant="outline"
-            className="hidden sm:inline-flex items-center gap-1 text-[11px] font-normal px-2 py-0.5 border-white/10 text-muted-foreground bg-muted/40"
-          >
-            <Sparkles className="size-3 text-brand" />
-            <span>{modelName}</span>
-          </Badge>
+
+          {/* Model badge — microchip style */}
+          <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-brand/8 border border-brand/15 text-[11px] text-brand font-medium flex-shrink-0">
+            <Cpu className="size-3 opacity-70" />
+            <Sparkles className="size-2.5 opacity-60" />
+            <span className="font-semibold tracking-tight">{modelName}</span>
+          </div>
         </div>
       </div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         {conversationId && hasMessages && (
           <>
             <ExportMenu conversationId={conversationId} />
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => setIsShareOpen(true)}
-              className="h-8 px-2.5 gap-1.5 text-xs font-medium border-white/10 hover:bg-white/5"
+              className="h-8 px-2.5 gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-lg border border-transparent hover:border-white/8 transition-all"
             >
               <Share2 className="size-3.5 text-brand" />
               <span className="hidden sm:inline">Share</span>
@@ -88,7 +90,7 @@ export function ChatHeader({
                   variant="ghost"
                   size="icon"
                   onClick={onClearChat}
-                  className="size-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  className="size-8 rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
                   aria-label="Clear conversation history"
                 >
                   <Trash2 className="size-3.5" />
@@ -110,16 +112,29 @@ export function ChatHeader({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
+                  className="size-8 rounded-lg text-muted-foreground/60 hover:text-foreground hover:bg-white/5 transition-colors"
                   aria-label="Return to landing page"
                 >
-                  <Home className="size-4" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="size-4"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                  </svg>
                 </Button>
               </Link>
             }
           />
           <TooltipContent side="bottom" className="text-xs">
-            Back to landing page
+            Back to home
           </TooltipContent>
         </Tooltip>
       </div>

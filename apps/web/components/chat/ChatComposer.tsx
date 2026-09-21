@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useRef, useState, useEffect } from 'react'
-import { ArrowUp, Square, Paperclip, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
+import { ArrowUp, Square, Paperclip, X, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ModelSelector } from '@/components/chat/ModelSelector'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -23,10 +24,11 @@ export function ChatComposer({
   isStreaming,
   selectedModelId,
   onSelectModel,
-  placeholder = 'Ask NexaAI anything...',
+  placeholder = 'Ask NexaAI anything…',
 }: ChatComposerProps) {
   const [content, setContent] = useState('')
   const [attachments, setAttachments] = useState<string[]>([])
+  const [isFocused, setIsFocused] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -57,14 +59,13 @@ export function ChatComposer({
     }
   }, [])
 
-  // Auto-resize textarea up to 200px max height
+  // Auto-resize textarea up to 180px max height
   useEffect(() => {
     const el = textareaRef.current
     if (!el) return
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`
   }, [content])
-
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -85,6 +86,7 @@ export function ChatComposer({
     onSendMessage(finalPrompt)
     setContent('')
     setAttachments([])
+    setIsFocused(false)
 
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
@@ -97,7 +99,6 @@ export function ChatComposer({
       const names = Array.from(files).map((f) => f.name)
       setAttachments((prev) => [...prev, ...names])
     }
-    // reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -108,10 +109,11 @@ export function ChatComposer({
   }
 
   const tokenEstimate = Math.round(content.length / 4)
+  const canSend = content.trim().length > 0 && !isStreaming
 
   return (
-    <div className="relative w-full max-w-3xl mx-auto px-4 pb-4">
-      {/* Hidden file input for attachment UI */}
+    <div className="relative w-full max-w-3xl mx-auto px-4 pb-5">
+      {/* Hidden file input */}
       <input
         type="file"
         ref={fileInputRef}
@@ -121,29 +123,68 @@ export function ChatComposer({
         aria-label="Upload document or code"
       />
 
-      <div className="relative flex flex-col rounded-2xl border border-white/10 bg-card/85 backdrop-blur-xl shadow-xl transition-all focus-within:border-brand/40 focus-within:ring-1 focus-within:ring-brand/20">
-        {/* Attachment chips preview */}
-        {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-3 pt-3">
-            {attachments.map((file, idx) => (
-              <div
-                key={idx}
-                className="flex items-center gap-1.5 rounded-md bg-brand/10 border border-brand/20 px-2 py-1 text-xs text-brand"
-              >
-                <Paperclip className="size-3" />
-                <span className="max-w-[160px] truncate">{file}</span>
-                <button
-                  type="button"
-                  onClick={() => removeAttachment(idx)}
-                  className="rounded hover:bg-brand/20 p-0.5"
-                  aria-label={`Remove ${file}`}
-                >
-                  <X className="size-3" />
-                </button>
-              </div>
-            ))}
-          </div>
+      {/* Composer container with animated focus border */}
+      <motion.div
+        animate={{
+          boxShadow: isFocused
+            ? '0 0 0 1px oklch(0.72 0.22 280 / 0.40), 0 8px 40px oklch(0 0 0 / 0.35), 0 0 32px oklch(0.72 0.22 280 / 0.08)'
+            : '0 4px 24px oklch(0 0 0 / 0.25), 0 1px 4px oklch(0 0 0 / 0.15)',
+        }}
+        transition={{ duration: 0.25 }}
+        className={cn(
+          'relative flex flex-col rounded-2xl transition-colors duration-200',
+          'composer-glass',
+          isFocused ? 'border-brand/35' : 'border-white/8',
+          'border'
         )}
+      >
+        {/* Shimmer top accent line when focused */}
+        <AnimatePresence>
+          {isFocused && (
+            <motion.div
+              initial={{ opacity: 0, scaleX: 0 }}
+              animate={{ opacity: 1, scaleX: 1 }}
+              exit={{ opacity: 0, scaleX: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute top-0 inset-x-0 h-px rounded-t-2xl overflow-hidden"
+            >
+              <div className="h-full shimmer-border rounded-t-2xl" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Attachment chips preview */}
+        <AnimatePresence>
+          {attachments.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="flex flex-wrap gap-1.5 px-3.5 pt-3"
+            >
+              {attachments.map((file, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, scale: 0.85 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.85 }}
+                  className="flex items-center gap-1.5 rounded-lg bg-brand/10 border border-brand/20 px-2.5 py-1 text-xs text-brand"
+                >
+                  <Paperclip className="size-3 flex-shrink-0" />
+                  <span className="max-w-[140px] truncate">{file}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(idx)}
+                    className="rounded hover:bg-brand/20 p-0.5 ml-0.5"
+                    aria-label={`Remove ${file}`}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Textarea */}
         <textarea
@@ -151,17 +192,19 @@ export function ChatComposer({
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
           rows={1}
           disabled={isStreaming}
-          className="w-full resize-none bg-transparent px-4 pt-3.5 pb-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none scrollbar-none leading-relaxed"
+          className="w-full resize-none bg-transparent px-4 pt-3.5 pb-2.5 text-sm text-foreground placeholder:text-muted-foreground/45 focus:outline-none scrollbar-none leading-relaxed min-h-[48px]"
           aria-label="Chat input message"
         />
 
         {/* Bottom toolbar */}
         <div className="flex items-center justify-between px-3 pb-3 pt-1">
           {/* Left toolbar items */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <ModelSelector
               selectedModelId={selectedModelId}
               onSelectModel={onSelectModel}
@@ -177,10 +220,10 @@ export function ChatComposer({
                     size="icon"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isStreaming}
-                    className="size-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5"
+                    className="size-8 rounded-lg text-muted-foreground/60 hover:text-foreground hover:bg-white/5 transition-colors"
                     aria-label="Attach file or document"
                   >
-                    <Paperclip className="size-4" />
+                    <Paperclip className="size-3.5" />
                   </Button>
                 }
               />
@@ -192,11 +235,20 @@ export function ChatComposer({
 
           {/* Right toolbar items */}
           <div className="flex items-center gap-2.5">
-            {content.length > 0 && (
-              <span className="text-[11px] font-mono text-muted-foreground/50 select-none">
-                ~{tokenEstimate} tokens
-              </span>
-            )}
+            {/* Token estimate */}
+            <AnimatePresence>
+              {content.length > 20 && (
+                <motion.span
+                  initial={{ opacity: 0, x: 6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 6 }}
+                  className="text-[11px] font-mono text-muted-foreground/35 select-none flex items-center gap-1"
+                >
+                  <Zap className="size-2.5 text-brand/40" />
+                  ~{tokenEstimate}
+                </motion.span>
+              )}
+            </AnimatePresence>
 
             {isStreaming ? (
               <Tooltip>
@@ -206,7 +258,7 @@ export function ChatComposer({
                       type="button"
                       size="icon"
                       onClick={onStopGeneration}
-                      className="size-8 rounded-xl bg-destructive/90 text-destructive-foreground hover:bg-destructive shadow-md transition-transform active:scale-95"
+                      className="size-9 rounded-xl bg-destructive/80 text-destructive-foreground hover:bg-destructive shadow-md transition-transform active:scale-95"
                       aria-label="Stop generation"
                     >
                       <Square className="size-3.5 fill-current" />
@@ -218,28 +270,44 @@ export function ChatComposer({
                 </TooltipContent>
               </Tooltip>
             ) : (
-              <Button
-                type="button"
-                size="icon"
-                onClick={handleSubmit}
-                disabled={!content.trim()}
-                className={cn(
-                  'size-8 rounded-xl transition-all',
-                  content.trim()
-                    ? 'gradient-brand text-white shadow-md glow-brand-sm hover:opacity-95 active:scale-95'
-                    : 'bg-muted text-muted-foreground/40 cursor-not-allowed'
-                )}
-                aria-label="Send message"
+              <motion.div
+                animate={canSend ? {
+                  boxShadow: [
+                    '0 0 8px oklch(0.72 0.22 280 / 0.30)',
+                    '0 0 16px oklch(0.72 0.22 280 / 0.50)',
+                    '0 0 8px oklch(0.72 0.22 280 / 0.30)',
+                  ],
+                } : {}}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                className="rounded-xl"
               >
-                <ArrowUp className="size-4" />
-              </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  onClick={handleSubmit}
+                  disabled={!canSend}
+                  className={cn(
+                    'size-9 rounded-xl transition-all duration-200',
+                    canSend
+                      ? 'gradient-brand text-white shadow-md hover:opacity-95 active:scale-95'
+                      : 'bg-muted/50 text-muted-foreground/30 cursor-not-allowed'
+                  )}
+                  aria-label="Send message"
+                >
+                  <ArrowUp className="size-4" />
+                </Button>
+              </motion.div>
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="mt-2 text-center text-[11px] text-muted-foreground/40">
-        NexaAI may produce inaccurate information. Press <kbd className="font-mono text-[10px] bg-muted/60 px-1 py-0.5 rounded border border-border/40">Enter</kbd> to send, <kbd className="font-mono text-[10px] bg-muted/60 px-1 py-0.5 rounded border border-border/40">Shift + Enter</kbd> for newline.
+      {/* Footer hint */}
+      <div className="mt-2 text-center text-[11px] text-muted-foreground/30 select-none">
+        <kbd className="font-mono text-[10px] bg-muted/40 px-1 py-0.5 rounded border border-border/30">Enter</kbd>
+        {' to send · '}
+        <kbd className="font-mono text-[10px] bg-muted/40 px-1 py-0.5 rounded border border-border/30">Shift+Enter</kbd>
+        {' for newline'}
       </div>
     </div>
   )

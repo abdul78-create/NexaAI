@@ -41,9 +41,9 @@ const secondaryNav = [
   { href: '/app/speech', icon: Mic, label: 'Speech Studio', badge: 'Speech' },
   { href: '/app/nlp', icon: FlaskConical, label: 'NLP Studio', badge: 'New' },
   { href: '/app/docs', icon: FileText, label: 'Documents', badge: 'RAG' },
-  { href: '/app/prompts', icon: BookOpen, label: 'Prompt Library' },
-  { href: '/app/usage', icon: BarChart3, label: 'Usage' },
-  { href: '/app/settings', icon: Settings, label: 'Settings' },
+  { href: '/app/prompts', icon: BookOpen, label: 'Prompt Library', badge: undefined },
+  { href: '/app/usage', icon: BarChart3, label: 'Usage', badge: undefined },
+  { href: '/app/settings', icon: Settings, label: 'Settings', badge: undefined },
 ]
 
 /* ============================================================
@@ -118,14 +118,25 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
       animate={{ width: isMobile ? '100%' : isSidebarCollapsed ? 64 : 260 }}
       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
       className={cn(
-        'relative flex flex-col border-r border-border/40 bg-sidebar h-full flex-shrink-0 overflow-hidden select-none',
+        'relative flex flex-col border-r border-white/[0.05] h-full flex-shrink-0 overflow-hidden select-none',
+        'sidebar-gradient',
         isMobile ? 'w-full border-r-0' : ''
       )}
     >
+      {/* Ambient top glow */}
+      {!isSidebarCollapsed && (
+        <div
+          className="absolute top-0 inset-x-0 h-32 pointer-events-none z-0"
+          style={{
+            background: 'radial-gradient(ellipse at 50% -20%, oklch(0.72 0.22 280 / 0.10) 0%, transparent 70%)',
+          }}
+        />
+      )}
+
       {/* Brand Header */}
       <div
         className={cn(
-          'flex h-14 flex-shrink-0 items-center border-b border-border/40 px-3',
+          'relative z-10 flex h-14 flex-shrink-0 items-center border-b border-white/[0.05] px-3',
           !isMobile && isSidebarCollapsed ? 'justify-center' : 'justify-between px-3.5'
         )}
       >
@@ -137,7 +148,7 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
                   variant="ghost"
                   size="icon"
                   onClick={toggleSidebar}
-                  className="size-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  className="size-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors"
                   aria-label="Expand sidebar"
                 >
                   <PanelLeftOpen className="size-4" />
@@ -151,10 +162,10 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
         ) : (
           <>
             <Link href="/" className="flex items-center gap-2.5 min-w-0 group">
-              <div className="size-7 flex-shrink-0 rounded-lg gradient-brand flex items-center justify-center shadow-md group-hover:glow-brand-sm transition-all">
+              <div className="size-7 flex-shrink-0 rounded-lg gradient-brand flex items-center justify-center shadow-lg group-hover:glow-brand-sm transition-all duration-200">
                 <Sparkles className="size-3.5 text-white" />
               </div>
-              <span className="font-semibold text-sm tracking-tight whitespace-nowrap">
+              <span className="font-bold text-sm tracking-tight whitespace-nowrap">
                 Nexa<span className="gradient-text">AI</span>
               </span>
             </Link>
@@ -164,7 +175,7 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                className="size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-white/5"
                 aria-label="Close navigation drawer"
               >
                 <X className="size-4" />
@@ -174,7 +185,7 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
                 variant="ghost"
                 size="icon"
                 onClick={toggleSidebar}
-                className="size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="size-7 rounded-md text-muted-foreground/60 hover:text-foreground hover:bg-white/5"
                 aria-label="Collapse sidebar"
               >
                 <PanelLeftClose className="size-3.5" />
@@ -185,7 +196,7 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
       </div>
 
       {/* Action Buttons: New Chat & Global Search */}
-      <div className={cn('p-3 pb-2 space-y-1.5', !isMobile && isSidebarCollapsed && 'p-2 space-y-1')}>
+      <div className={cn('relative z-10 p-3 pb-2 space-y-1.5', !isMobile && isSidebarCollapsed && 'p-2 space-y-1')}>
         {!isMobile && isSidebarCollapsed ? (
           <>
             <Tooltip>
@@ -194,7 +205,7 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
                   <Button
                     size="icon"
                     onClick={handleCreateNewChat}
-                    className="w-full h-9 gradient-brand border-0 text-white shadow-md hover:opacity-90 active:scale-95"
+                    className="w-full h-9 gradient-brand border-0 text-white shadow-md glow-brand-sm hover:opacity-90 active:scale-95"
                     aria-label="New chat"
                   >
                     <Plus className="size-4" />
@@ -216,7 +227,7 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
                     className="w-full h-9 hover:bg-white/5 text-muted-foreground hover:text-foreground"
                     aria-label="Global Search"
                   >
-                    <Search className="size-4 text-indigo-400" />
+                    <Search className="size-4 text-brand/70" />
                   </Button>
                 }
               />
@@ -229,22 +240,22 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
           <>
             <Button
               onClick={handleCreateNewChat}
-              className="w-full h-9 gradient-brand border-0 text-white text-xs font-medium shadow-md hover:opacity-90 active:scale-95 flex items-center justify-center gap-2"
+              className="w-full h-9 gradient-brand border-0 text-white text-xs font-semibold shadow-md glow-brand-sm hover:opacity-90 active:scale-95 flex items-center justify-center gap-2 rounded-xl"
             >
-              <Plus className="size-4" />
+              <Plus className="size-3.5" />
               <span>New chat</span>
             </Button>
 
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={onOpenSearch}
-              className="w-full h-8 text-xs font-normal border-white/10 hover:bg-white/5 text-muted-foreground hover:text-foreground justify-between px-2.5"
+              className="w-full h-8 text-xs font-normal border border-white/[0.07] hover:bg-white/5 hover:border-white/12 text-muted-foreground/70 hover:text-foreground justify-between px-2.5 rounded-lg transition-all"
             >
               <div className="flex items-center gap-2">
-                <Search className="size-3.5 text-indigo-400" />
-                <span>Search chats...</span>
+                <Search className="size-3.5 text-brand/60" />
+                <span>Search chats…</span>
               </div>
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-muted/50 border border-white/10 rounded text-muted-foreground">
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-white/5 border border-white/8 rounded text-muted-foreground/50">
                 ⌘K
               </kbd>
             </Button>
@@ -254,14 +265,14 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
 
       {/* Workspace Quick View Navigation Tabs */}
       {(isMobile || !isSidebarCollapsed) && (
-        <div className="px-3 py-1 flex items-center gap-1 border-b border-white/6 text-xs">
+        <div className="relative z-10 px-3 py-1.5 flex items-center gap-1 border-b border-white/[0.04]">
           <button
             onClick={() => setActiveView('all')}
             className={cn(
-              'flex-1 py-1 px-2 rounded-md text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors',
+              'flex-1 py-1 px-2 rounded-lg text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors',
               activeView === 'all'
-                ? 'bg-white/10 text-foreground font-semibold'
-                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                ? 'bg-brand/12 text-brand font-semibold border border-brand/20'
+                : 'text-muted-foreground/60 hover:text-foreground hover:bg-white/5'
             )}
           >
             <MessageSquare className="size-3" />
@@ -271,29 +282,29 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
           <button
             onClick={() => setActiveView('archived')}
             className={cn(
-              'py-1 px-2 rounded-md text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors',
+              'py-1 px-2 rounded-lg text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors',
               activeView === 'archived'
-                ? 'bg-white/10 text-foreground font-semibold'
-                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                ? 'bg-white/8 text-foreground font-semibold'
+                : 'text-muted-foreground/60 hover:text-foreground hover:bg-white/5'
             )}
             title="Archived chats"
           >
             <Archive className="size-3" />
-            <span>{archivedCount > 0 ? archivedCount : ''}</span>
+            {archivedCount > 0 && <span>{archivedCount}</span>}
           </button>
 
           <button
             onClick={() => setActiveView('trash')}
             className={cn(
-              'py-1 px-2 rounded-md text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors',
+              'py-1 px-2 rounded-lg text-[11px] font-medium flex items-center justify-center gap-1.5 transition-colors',
               activeView === 'trash'
-                ? 'bg-destructive/15 text-destructive font-semibold'
-                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                ? 'bg-destructive/12 text-destructive font-semibold border border-destructive/20'
+                : 'text-muted-foreground/60 hover:text-foreground hover:bg-white/5'
             )}
             title="Trash"
           >
             <Trash2 className="size-3" />
-            <span>{trashCount > 0 ? trashCount : ''}</span>
+            {trashCount > 0 && <span>{trashCount}</span>}
           </button>
         </div>
       )}
@@ -333,7 +344,7 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
                   onClick={() => selectConversation('conv-fastapi-async')}
                   className={cn(
                     'size-9 rounded-lg hover:bg-white/5',
-                    activeConversationId ? 'text-brand bg-brand/10' : 'text-muted-foreground'
+                    activeConversationId ? 'text-brand bg-brand/8' : 'text-muted-foreground'
                   )}
                   aria-label="Recent conversation"
                 >
@@ -348,9 +359,8 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
         </div>
       )}
 
-
       {/* Secondary workspace links */}
-      <div className={cn('border-t border-white/6 p-2 space-y-0.5', isSidebarCollapsed && 'p-1.5')}>
+      <div className={cn('relative z-10 border-t border-white/[0.04] p-2 space-y-0.5', isSidebarCollapsed && 'p-1.5')}>
         {secondaryNav.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
@@ -363,7 +373,7 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
                     <Link
                       href={item.href}
                       className={cn(
-                        'flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors',
+                        'flex size-9 items-center justify-center rounded-lg text-muted-foreground/70 hover:text-foreground hover:bg-white/5 transition-all duration-150',
                         isActive && 'text-brand bg-brand/10'
                       )}
                       aria-label={item.label}
@@ -384,16 +394,18 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors',
-                isActive && 'bg-brand/10 text-brand font-medium'
+                'relative flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150',
+                isActive
+                  ? 'bg-brand/10 text-brand font-medium border-l-2 border-brand pl-2'
+                  : 'text-muted-foreground/70 hover:bg-white/5 hover:text-foreground'
               )}
             >
               <div className="flex items-center gap-2.5">
-                <Icon className="size-3.5" />
+                <Icon className={cn('size-3.5', isActive && 'text-brand')} />
                 <span>{item.label}</span>
               </div>
               {item.badge && (
-                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-brand/15 text-brand border border-brand/20">
+                <span className="text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded-md bg-brand/12 text-brand/80 border border-brand/18">
                   {item.badge}
                 </span>
               )}
@@ -402,8 +414,8 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
         })}
       </div>
 
-      {/* User profile & Collapse button */}
-      <div className={cn('border-t border-white/6 p-2.5', isSidebarCollapsed && 'p-2')}>
+      {/* User profile */}
+      <div className={cn('relative z-10 border-t border-white/[0.04] p-2.5', isSidebarCollapsed && 'p-2')}>
         {isSidebarCollapsed ? (
           <Tooltip>
             <TooltipTrigger
@@ -424,49 +436,52 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
             </TooltipContent>
           </Tooltip>
         ) : (
-          <div className="flex items-center justify-between gap-2 rounded-lg p-1">
+          <div className="flex items-center justify-between gap-2 rounded-xl p-1.5 hover:bg-white/[0.03] transition-colors">
             {isAuthenticated && user ? (
               <>
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="size-7 rounded-full bg-brand/30 border border-brand/40 flex items-center justify-center text-xs font-bold text-brand flex-shrink-0 uppercase">
-                    {user.displayName.charAt(0) || 'U'}
+                  {/* Avatar with subtle ring */}
+                  <div className="relative flex-shrink-0">
+                    <div className="size-7 rounded-full bg-brand/25 border border-brand/40 flex items-center justify-center text-xs font-bold text-brand uppercase">
+                      {user.displayName.charAt(0) || 'U'}
+                    </div>
+                    {/* Online dot */}
+                    <div className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full bg-emerald-500 border-2 border-sidebar" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-foreground truncate">{user.displayName}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+                    <p className="text-[10px] text-muted-foreground/60 truncate">{user.email}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1">
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => logout()}
-                          className="size-7 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          aria-label="Sign out"
-                        >
-                          <LogOut className="size-3.5" />
-                        </Button>
-                      }
-                    />
-                    <TooltipContent side="top" className="text-xs">
-                      Sign out
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => logout()}
+                        className="size-7 rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                        aria-label="Sign out"
+                      >
+                        <LogOut className="size-3.5" />
+                      </Button>
+                    }
+                  />
+                  <TooltipContent side="top" className="text-xs">
+                    Sign out
+                  </TooltipContent>
+                </Tooltip>
               </>
             ) : (
               <>
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="size-7 rounded-full bg-muted/60 border border-border flex items-center justify-center text-xs font-bold text-muted-foreground flex-shrink-0">
+                  <div className="size-7 rounded-full bg-muted/60 border border-white/10 flex items-center justify-center text-xs font-bold text-muted-foreground flex-shrink-0">
                     G
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-foreground truncate">Guest Mode</p>
-                    <p className="text-[10px] text-muted-foreground truncate">Demo Workspace</p>
+                    <p className="text-[10px] text-muted-foreground/60 truncate">Demo Workspace</p>
                   </div>
                 </div>
 
@@ -474,7 +489,7 @@ export function Sidebar({ isMobile = false, onClose, onOpenSearch }: SidebarProp
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 px-2 text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 rounded-md gap-1"
+                    className="h-7 px-2 text-xs font-medium text-brand hover:text-brand hover:bg-brand/10 rounded-lg gap-1 flex-shrink-0"
                   >
                     <LogIn className="size-3" />
                     <span>Sign In</span>
@@ -505,7 +520,7 @@ function MobileDrawer({ onOpenSearch }: { onOpenSearch: () => void }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
             onClick={() => setMobileSidebarOpen(false)}
           />
 
@@ -515,7 +530,7 @@ function MobileDrawer({ onOpenSearch }: { onOpenSearch: () => void }) {
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="fixed inset-y-0 left-0 z-50 w-72 bg-sidebar border-r border-white/6 md:hidden flex flex-col"
+            className="fixed inset-y-0 left-0 z-50 w-72 border-r border-white/[0.05] md:hidden flex flex-col sidebar-gradient"
           >
             <Sidebar isMobile onClose={() => setMobileSidebarOpen(false)} onOpenSearch={onOpenSearch} />
           </motion.div>
@@ -558,7 +573,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background">
+    <div className="flex h-screen w-screen overflow-hidden bg-background aurora-bg">
       {/* Desktop sidebar */}
       <div className="hidden md:flex h-full">
         <Sidebar onOpenSearch={() => setIsSearchOpen(true)} />
