@@ -21,3 +21,5 @@ class OAuthCallbackRequest(BaseModel):
     provider: str = Field(..., description="Provider name: google or github")
     code: str = Field(..., description="Authorization code from provider")
     state: Optional[str] = Field(None, description="State string passed during initialization")
+    redirect_uri: Optional[str] = Field(None, description="Optional redirect URI matching the authorization request")
+

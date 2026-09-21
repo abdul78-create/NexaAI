@@ -141,7 +141,10 @@ async def oauth_callback(
 
     # 3. Handle provider code exchange & user profile
     if provider == "google":
-        profile = await OAuthService.handle_google_callback(data.code)
+        profile = await OAuthService.handle_google_callback(
+            code=data.code,
+            redirect_uri=data.redirect_uri,
+        )
     elif provider == "github":
         profile = await OAuthService.handle_github_callback(data.code)
     else:

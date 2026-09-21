@@ -198,7 +198,7 @@ class OAuthService:
     # ── Code Exchange & Profile Fetching ──────────────────────────────────
 
     @classmethod
-    async def handle_google_callback(cls, code: str) -> Dict[str, Any]:
+    async def handle_google_callback(cls, code: str, redirect_uri: Optional[str] = None) -> Dict[str, Any]:
         """Exchange Google authorization code for user profile with verified email."""
         if not cls.is_google_configured():
             raise HTTPException(
@@ -206,12 +206,16 @@ class OAuthService:
                 detail="Google OAuth is not configured.",
             )
 
-        redirect_uri = cls.get_google_redirect_uri()
+        effective_redirect_uri = (
+            redirect_uri.strip().strip("'\"").rstrip("/")
+            if redirect_uri
+            else cls.get_google_redirect_uri()
+        )
         token_data = {
             "code": code,
             "client_id": settings.GOOGLE_CLIENT_ID,
             "client_secret": settings.GOOGLE_CLIENT_SECRET,
-            "redirect_uri": redirect_uri,
+            "redirect_uri": effective_redirect_uri,
             "grant_type": "authorization_code",
         }
 
@@ -221,10 +225,34 @@ class OAuthService:
                 data=token_data,
             )
             if token_resp.status_code != 200:
-                logger.error(f"Google token exchange failed: {token_resp.text}")
+                err_code = "token_exchange_failed"
+                err_desc = "Invalid or expired code."
+                try:
+                    err_json = token_resp.json()
+                    err_code = err_json.get("error", "token_exchange_failed")
+                    err_desc = err_json.get("error_description", err_code)
+                except Exception:
+                    err_desc = token_resp.text[:200]
+
+                # Sanitize: never log secrets, codes, or tokens
+                safe_redirect = effective_redirect_uri.split("?")[0] if effective_redirect_uri else ""
+                logger.error(
+                    f"Google token exchange rejected: status={token_resp.status_code}, "
+                    f"error={err_code}, description={err_desc}, redirect_uri={safe_redirect}"
+                )
+
+                if err_code == "redirect_uri_mismatch":
+                    msg = f"Google OAuth redirect URI mismatch. Expected URI: {safe_redirect}"
+                elif err_code == "invalid_client":
+                    msg = "Google OAuth client credentials rejected by Google."
+                elif err_code == "invalid_grant":
+                    msg = f"Failed to authenticate with Google. Authorization code is invalid or already used ({err_desc})."
+                else:
+                    msg = f"Failed to authenticate with Google: {err_code} ({err_desc})."
+
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Failed to authenticate with Google. Invalid or expired code.",
+                    detail=msg,
                 )
 
             tokens = token_resp.json()

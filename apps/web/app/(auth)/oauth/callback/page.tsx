@@ -14,58 +14,74 @@ function CallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const setSession = useAuthStore((s) => s.setSession)
+  const hasExecutedRef = React.useRef(false)
 
   const [statusText, setStatusText] = useState('Verifying authentication credentials...')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isCancelled, setIsCancelled] = useState(false)
 
   useEffect(() => {
-    async function processCallback() {
-      const code = searchParams.get('code')
-      const token = searchParams.get('token')
-      const state = searchParams.get('state')
-      const error = searchParams.get('error')
-      const errorDesc = searchParams.get('error_description')
-      let provider = searchParams.get('provider')
+    if (hasExecutedRef.current) {
+      return
+    }
 
-      // Infer provider from pathname or query if not explicit
-      if (!provider) {
-        if (typeof window !== 'undefined' && window.location.pathname.includes('github')) {
-          provider = 'github'
-        } else {
-          provider = 'google'
-        }
+    const code = searchParams.get('code')
+    const token = searchParams.get('token')
+    const state = searchParams.get('state')
+    const error = searchParams.get('error')
+    const errorDesc = searchParams.get('error_description')
+    let provider = searchParams.get('provider')
+
+    // Infer provider from pathname or query if not explicit
+    if (!provider) {
+      if (typeof window !== 'undefined' && window.location.pathname.includes('github')) {
+        provider = 'github'
+      } else {
+        provider = 'google'
       }
-      const providerLabel = provider.charAt(0).toUpperCase() + provider.slice(1)
+    }
+    const providerLabel = provider.charAt(0).toUpperCase() + provider.slice(1)
 
-      // Handle user cancellation or provider rejection
-      if (error === 'access_denied' || errorDesc?.toLowerCase().includes('access_denied')) {
-        setIsCancelled(true)
-        setErrorMessage(`Login cancelled. You chose not to sign in with ${providerLabel}.`)
-        return
-      }
+    // Handle user cancellation or provider rejection
+    if (error === 'access_denied' || errorDesc?.toLowerCase().includes('access_denied')) {
+      setIsCancelled(true)
+      setErrorMessage(`Login cancelled. You chose not to sign in with ${providerLabel}.`)
+      return
+    }
 
-      if (error || errorDesc) {
-        setErrorMessage(errorDesc || error || 'Authentication could not be completed. Please try again.')
-        return
-      }
+    if (error || errorDesc) {
+      setErrorMessage(errorDesc || error || 'Authentication could not be completed. Please try again.')
+      return
+    }
 
-      // Case 1: Direct token provided in redirect
-      if (token) {
-        setStatusText('Finalizing session...')
-        await setSession(token)
+    // Case 1: Direct token provided in redirect
+    if (token) {
+      hasExecutedRef.current = true
+      setStatusText('Finalizing session...')
+      setSession(token).then(() => {
         router.push('/app')
-        return
-      }
+      })
+      return
+    }
 
-      // Case 2: Code exchange required
-      if (!code) {
-        setErrorMessage('No authorization code or session token received from provider.')
-        return
-      }
+    // Case 2: Code exchange required
+    if (!code) {
+      setErrorMessage('No authorization code or session token received from provider.')
+      return
+    }
 
+    hasExecutedRef.current = true
+
+    async function processCallback() {
       try {
         setStatusText(`Connecting with ${providerLabel}...`)
+
+        // Construct canonical redirect URI matching Google Cloud configuration
+        const redirectUri =
+          typeof window !== 'undefined'
+            ? `${window.location.origin}/api/auth/callback/${provider}`
+            : undefined
+
         const res = await fetch(`${API_BASE}/auth/oauth/callback`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -73,24 +89,9 @@ function CallbackContent() {
             provider,
             code,
             state: state || undefined,
+            redirect_uri: redirectUri,
           }),
           credentials: 'include',
-        }).catch(async (fetchErr) => {
-          // If direct cross-origin fetch is blocked or fails (e.g. ad-blocker or CORS timeout),
-          // fallback to same-origin reverse proxy if API_BASE is absolute
-          if (fetchErr instanceof Error && API_BASE.startsWith('http')) {
-            return fetch('/api/v1/auth/oauth/callback', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                provider,
-                code,
-                state: state || undefined,
-              }),
-              credentials: 'include',
-            })
-          }
-          throw fetchErr
         })
 
         if (!res.ok) {

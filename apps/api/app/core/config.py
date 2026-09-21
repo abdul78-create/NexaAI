@@ -68,6 +68,24 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: Optional[str] = None
     GITHUB_REDIRECT_URI: Optional[str] = None
 
+    @field_validator(
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_REDIRECT_URI",
+        "AUTH_FRONTEND_URL",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
+        "GITHUB_REDIRECT_URI",
+        mode="before",
+    )
+    @classmethod
+    def sanitize_oauth_strings(cls, v: Optional[str]) -> Optional[str]:
+        if isinstance(v, str):
+            cleaned = v.strip().strip("'\"").strip()
+            return cleaned if cleaned else None
+        return v
+
+
     # Chat Modes (Task 4)
     CHAT_MODE_LOW_MODEL: str = "gemini-2.5-flash"
     CHAT_MODE_STANDARD_MODEL: str = "gemini-2.5-flash"
