@@ -16,13 +16,13 @@ def _parse_list_or_str(v: Union[str, List[str]], default_if_empty: Optional[List
             try:
                 parsed = json.loads(v_str)
                 if isinstance(parsed, list):
-                    return [str(item).strip() for item in parsed if str(item).strip()]
+                    return [str(item).strip().rstrip("/") for item in parsed if str(item).strip()]
             except Exception:
                 pass
-        return [i.strip() for i in v_str.split(",") if i.strip()]
+        return [i.strip().rstrip("/") for i in v_str.split(",") if i.strip()]
     elif isinstance(v, list):
-        return [str(i).strip() for i in v if str(i).strip()]
-    return default_if_empty if default_if_empty is not None else []
+        return [str(i).strip().rstrip("/") for i in v if str(i).strip()]
+    return [item.rstrip("/") for item in default_if_empty] if default_if_empty is not None else []
 
 
 class Settings(BaseSettings):
@@ -57,7 +57,10 @@ class Settings(BaseSettings):
     COOKIE_DOMAIN: Optional[str] = None
 
     # OAuth Settings (Task 2)
-    AUTH_FRONTEND_URL: str = "http://localhost:3000"
+    AUTH_FRONTEND_URL: str = Field(
+        default="https://nexaai-frontend-1yi2.onrender.com" if (os.getenv("APP_ENV") == "production" or os.getenv("RENDER")) else "http://localhost:3000",
+        description="Frontend URL for OAuth redirects",
+    )
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
     GOOGLE_REDIRECT_URI: Optional[str] = None
@@ -75,12 +78,13 @@ class Settings(BaseSettings):
     CORS_ORIGINS: Union[str, List[str]] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://nexaai-frontend-1yi2.onrender.com",
     ]
 
     @field_validator("CORS_ORIGINS", mode="after")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        return _parse_list_or_str(v, ["http://localhost:3000", "http://127.0.0.1:3000"])
+        return _parse_list_or_str(v, ["http://localhost:3000", "http://127.0.0.1:3000", "https://nexaai-frontend-1yi2.onrender.com"])
 
     # Database
     DATABASE_URL: str = Field(

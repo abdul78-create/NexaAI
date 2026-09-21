@@ -75,11 +75,30 @@ function CallbackContent() {
             state: state || undefined,
           }),
           credentials: 'include',
+        }).catch(async (fetchErr) => {
+          // If direct cross-origin fetch is blocked or fails (e.g. ad-blocker or CORS timeout),
+          // fallback to same-origin reverse proxy if API_BASE is absolute
+          if (fetchErr instanceof Error && API_BASE.startsWith('http')) {
+            return fetch('/api/v1/auth/oauth/callback', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                provider,
+                code,
+                state: state || undefined,
+              }),
+              credentials: 'include',
+            })
+          }
+          throw fetchErr
         })
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
-          const detail = typeof errData.detail === 'string' ? errData.detail : 'OAuth authorization exchange failed.'
+          const detail =
+            errData?.error?.message ||
+            (typeof errData?.detail === 'string' ? errData.detail : null) ||
+            'OAuth authorization exchange failed.'
           throw new Error(detail)
         }
 

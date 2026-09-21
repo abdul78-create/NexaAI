@@ -29,6 +29,22 @@ const nextConfig: NextConfig = {
     // Optimized CSS (optional — comment out if it causes issues)
     // optimizeCss: true,
   },
+
+  // Reverse proxy rewrites for /api/v1 API endpoints
+  async rewrites() {
+    const rawBackend =
+      process.env.INTERNAL_API_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'https://nexaai-backend-4uqm.onrender.com'
+    const backendOrigin = rawBackend.trim().replace(/\/api\/v1\/?$/, '').replace(/\/+$/, '')
+
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${backendOrigin}/api/v1/:path*`,
+      },
+    ]
+  },
 }
 
 export default nextConfig

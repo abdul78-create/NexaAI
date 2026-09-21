@@ -145,4 +145,18 @@ describe('OAuth Callback Route Origin & Parameter Regression Tests', () => {
     assert.doesNotMatch(fallbackOrigin, /render\.com/)
     assert.equal(fallbackOrigin, 'http://localhost:3000')
   })
+
+  it('8. Confirms production environment falls back safely to production frontend', () => {
+    delete process.env.NEXT_PUBLIC_APP_URL
+    const env = process.env as Record<string, string | undefined>
+    const originalNodeEnv = env.NODE_ENV
+    env.NODE_ENV = 'production'
+    try {
+      const fallbackReq = new NextRequest('http://0.0.0.0:10000/api/auth/callback/google')
+      const fallbackOrigin = resolvePublicOrigin(fallbackReq)
+      assert.equal(fallbackOrigin, 'https://nexaai-frontend-1yi2.onrender.com')
+    } finally {
+      env.NODE_ENV = originalNodeEnv
+    }
+  })
 })

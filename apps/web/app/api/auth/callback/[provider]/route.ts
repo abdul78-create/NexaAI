@@ -43,6 +43,9 @@ export function resolvePublicOrigin(request: NextRequest): string {
   }
 
   // 4. Default safe fallback
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://nexaai-frontend-1yi2.onrender.com'
+  }
   return 'http://localhost:3000'
 }
 
