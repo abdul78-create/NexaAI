@@ -1,29 +1,18 @@
 /**
  * Centralized API configuration for NexaAI web client.
- * Ensures API base URL always ends with '/api/v1' without duplicate slashes or prefixes.
+ * In browser/client context, always routes through same-origin relative '/api/v1' to use Next.js reverse proxy.
+ * In server context, uses NEXT_PUBLIC_API_URL or INTERNAL_API_URL with normalized '/api/v1' suffix.
  */
 export function getApiBaseUrl(): string {
-  const rawUrl = process.env.NEXT_PUBLIC_API_URL?.trim()
-
-  if (rawUrl) {
-    // Strip any trailing slashes
-    const cleaned = rawUrl.replace(/\/+$/, '')
-    // Ensure /api/v1 prefix is appended if omitted
-    if (!cleaned.endsWith('/api/v1')) {
-      return `${cleaned}/api/v1`
-    }
-    return cleaned
-  }
-
-  // In browser context without explicit absolute URL, use same-origin relative proxy
+  // 1. In browser/client context, ALWAYS use same-origin relative proxy
   if (typeof window !== 'undefined') {
     return '/api/v1'
   }
 
-  // Server-side fallback for internal requests or local dev
-  const internalUrl = process.env.INTERNAL_API_URL?.trim()
-  if (internalUrl) {
-    const cleaned = internalUrl.replace(/\/+$/, '')
+  // 2. In server context, use explicit backend URL
+  const rawUrl = process.env.NEXT_PUBLIC_API_URL?.trim() || process.env.INTERNAL_API_URL?.trim()
+  if (rawUrl) {
+    const cleaned = rawUrl.replace(/\/+$/, '')
     return cleaned.endsWith('/api/v1') ? cleaned : `${cleaned}/api/v1`
   }
 
