@@ -25,6 +25,7 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.db.models.user import User
 from app.db.models.oauth_account import OAuthAccount
+from app.schemas.user import UserResponse
 from app.services.auth_service import AuthService
 from app.services.oauth_service import OAuthService, get_oauth_cookie_kwargs
 
@@ -429,3 +430,137 @@ async def test_oauth_callback_endpoint_full_flow(client: AsyncClient, async_db: 
 
         # Refresh cookie should be set, and oauth_state cookie cleared
         assert settings.REFRESH_COOKIE_NAME in resp_success.cookies or "set-cookie" in resp_success.headers
+
+
+@pytest.mark.asyncio
+async def test_oauth_user_response_serialization_subsequent_login(async_db: AsyncSession):
+    """Regression test: UserResponse serialization must succeed when an existing OAuth user logs in again.
+
+    Verifies that oauth_providers is eagerly loaded / refreshed and does not raise
+    MissingGreenlet during Pydantic UserResponse.model_validate(user).
+    """
+    email = f"regr_{uuid.uuid4().hex[:8]}@example.com"
+    account_id = f"sub-regr-{uuid.uuid4().hex[:8]}"
+
+    # Initial registration via OAuth
+    u1 = await AuthService.create_or_link_oauth_user(
+        db=async_db,
+        provider="google",
+        provider_account_id=account_id,
+        email=email,
+        display_name="Regression User",
+        email_verified=True,
+    )
+    resp1 = UserResponse.model_validate(u1)
+    assert resp1.oauth_providers == ["google"]
+    assert resp1.email == email
+
+    # Simulate subsequent login with the same OAuth provider & account
+    u2 = await AuthService.create_or_link_oauth_user(
+        db=async_db,
+        provider="google",
+        provider_account_id=account_id,
+        email=email,
+    )
+    assert u2.id == u1.id
+
+    # Serialization must succeed without MissingGreenlet
+    resp2 = UserResponse.model_validate(u2)
+    assert resp2.id == u1.id
+    assert resp2.oauth_providers == ["google"]
+
+
+@pytest.mark.asyncio
+async def test_oauth_callback_subsequent_login_flow(client: AsyncClient, async_db: AsyncSession, monkeypatch):
+    """Regression test: POST /api/v1/auth/oauth/callback for an already-existing OAuth user.
+
+    Ensures the entire HTTP callback pipeline successfully serializes UserResponse with oauth_providers.
+    """
+    monkeypatch.setattr(settings, "GOOGLE_CLIENT_ID", "test-google-id")
+    monkeypatch.setattr(settings, "GOOGLE_CLIENT_SECRET", "test-google-secret")
+
+    callback_email = f"existing_cb_{uuid.uuid4().hex[:8]}@example.com"
+    account_id = f"sub-cb-{uuid.uuid4().hex[:8]}"
+
+    # Pre-create user with linked Google account
+    pre_user = await AuthService.create_or_link_oauth_user(
+        db=async_db,
+        provider="google",
+        provider_account_id=account_id,
+        email=callback_email,
+        display_name="Existing Callback User",
+        email_verified=True,
+    )
+    assert pre_user.id is not None
+
+    mock_profile = {
+        "provider": "google",
+        "provider_account_id": account_id,
+        "email": callback_email,
+        "email_verified": True,
+        "display_name": "Existing Callback User",
+    }
+
+    state = OAuthService.generate_oauth_state("google")
+    client.cookies.set("nexaai_oauth_state", state)
+
+    with patch.object(OAuthService, "handle_google_callback", AsyncMock(return_value=mock_profile)):
+        resp = await client.post(
+            "/api/v1/auth/oauth/callback",
+            json={"provider": "google", "code": "valid-code", "state": state},
+        )
+        assert resp.status_code == 200, resp.text
+        data = resp.json()
+        assert "user" in data
+        assert data["user"]["email"] == callback_email
+        assert data["user"]["oauth_providers"] == ["google"]
+
+
+@pytest.mark.asyncio
+async def test_oauth_multi_provider_linking_and_serialization(async_db: AsyncSession):
+    """Regression test: User links multiple OAuth providers and serializes UserResponse."""
+    email = f"multi_{uuid.uuid4().hex[:8]}@example.com"
+
+    # 1. Sign in with Google
+    u1 = await AuthService.create_or_link_oauth_user(
+        db=async_db,
+        provider="google",
+        provider_account_id=f"goog-{uuid.uuid4().hex[:8]}",
+        email=email,
+        display_name="Multi User",
+        email_verified=True,
+    )
+    resp1 = UserResponse.model_validate(u1)
+    assert resp1.oauth_providers == ["google"]
+
+    # 2. Link GitHub with matching email
+    u2 = await AuthService.create_or_link_oauth_user(
+        db=async_db,
+        provider="github",
+        provider_account_id=f"gh-{uuid.uuid4().hex[:8]}",
+        email=email,
+        display_name="Multi User GH",
+        email_verified=True,
+    )
+    assert u2.id == u1.id
+    resp2 = UserResponse.model_validate(u2)
+    assert set(resp2.oauth_providers) == {"google", "github"}
+
+
+@pytest.mark.asyncio
+async def test_detached_user_response_validation_safety():
+    """Verify that a detached or unloaded User instance safely serializes without MissingGreenlet."""
+    from datetime import datetime, timezone
+
+    detached_user = User(
+        id=uuid.uuid4(),
+        email="detached@example.com",
+        display_name="Detached User",
+        is_active=True,
+        is_verified=False,
+        created_at=datetime.now(timezone.utc),
+    )
+    resp = UserResponse.model_validate(detached_user)
+    assert resp.email == "detached@example.com"
+    assert resp.oauth_providers == []
+

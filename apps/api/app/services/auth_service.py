@@ -27,16 +27,24 @@ class AuthService:
 
     @staticmethod
     async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
-        """Fetch user by case-insensitive email address."""
+        """Fetch user by case-insensitive email address with eager-loaded OAuth accounts."""
         normalized_email = email.strip().lower()
-        stmt = select(User).where(User.email == normalized_email)
+        stmt = (
+            select(User)
+            .where(User.email == normalized_email)
+            .options(selectinload(User.oauth_accounts))
+        )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
 
     @staticmethod
     async def get_user_by_id(db: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
-        """Fetch user by UUID identifier."""
-        stmt = select(User).where(User.id == user_id)
+        """Fetch user by UUID identifier with eager-loaded OAuth accounts."""
+        stmt = (
+            select(User)
+            .where(User.id == user_id)
+            .options(selectinload(User.oauth_accounts))
+        )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -69,7 +77,7 @@ class AuthService:
 
         db.add(new_user)
         await db.commit()
-        await db.refresh(new_user)
+        await db.refresh(new_user, ["oauth_accounts"])
         return new_user
 
     @classmethod
@@ -161,7 +169,7 @@ class AuthService:
         stmt = (
             select(RefreshToken)
             .where(RefreshToken.token_hash == target_hash)
-            .options(selectinload(RefreshToken.user))
+            .options(selectinload(RefreshToken.user).selectinload(User.oauth_accounts))
         )
         result = await db.execute(stmt)
         token_record = result.scalar_one_or_none()
@@ -246,7 +254,7 @@ class AuthService:
                 OAuthAccount.provider == norm_provider,
                 OAuthAccount.provider_account_id == str(provider_account_id),
             )
-            .options(selectinload(OAuthAccount.user))
+            .options(selectinload(OAuthAccount.user).selectinload(User.oauth_accounts))
         )
         result = await db.execute(stmt)
         oauth_acc = result.scalar_one_or_none()
@@ -264,6 +272,7 @@ class AuthService:
             if avatar_url and not user.avatar_url:
                 user.avatar_url = avatar_url
             await db.commit()
+            await db.refresh(user, ["oauth_accounts"])
             return user
 
         # 2. Check email verification before linking or creating
@@ -310,6 +319,6 @@ class AuthService:
         )
         db.add(new_oauth)
         await db.commit()
-        await db.refresh(user)
+        await db.refresh(user, ["oauth_accounts"])
         return user
 

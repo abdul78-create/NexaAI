@@ -172,6 +172,9 @@ async def oauth_callback(
 
     _set_refresh_cookie(response, raw_refresh)
 
+    # Ensure oauth_accounts relationship is loaded before UserResponse serialization
+    await db.refresh(user, ["oauth_accounts"])
+
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",

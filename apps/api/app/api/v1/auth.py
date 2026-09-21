@@ -79,6 +79,9 @@ async def login(
 
     _set_refresh_cookie(response, raw_refresh)
 
+    # Ensure oauth_accounts is loaded before serialization
+    await db.refresh(user, ["oauth_accounts"])
+
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
@@ -115,6 +118,9 @@ async def refresh(
     )
 
     _set_refresh_cookie(response, new_raw_refresh)
+
+    # Ensure oauth_accounts is loaded before serialization
+    await db.refresh(user, ["oauth_accounts"])
 
     return TokenResponse(
         access_token=new_access_token,

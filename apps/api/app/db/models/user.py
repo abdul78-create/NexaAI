@@ -107,8 +107,29 @@ class User(Base, TimestampMixin):
 
     @property
     def linked_providers(self) -> List[str]:
-        """List of linked OAuth provider names."""
-        return [oa.provider for oa in self.oauth_accounts]
+        """List of linked OAuth provider names.
+
+        Reads eagerly-loaded oauth_accounts safely without triggering synchronous
+        lazy loading / MissingGreenlet during async session serialization.
+        """
+        try:
+            from sqlalchemy import inspect
+            from sqlalchemy.orm.attributes import NO_VALUE
+
+            state = inspect(self)
+            if state is not None and "oauth_accounts" in state.attrs:
+                loaded = state.attrs.oauth_accounts.loaded_value
+                if loaded is not NO_VALUE and loaded is not None:
+                    return [oa.provider for oa in loaded]
+                return []
+        except Exception:
+            pass
+
+        # Fallback for plain Python objects / unit test mocks
+        accounts = getattr(self, "__dict__", {}).get("oauth_accounts")
+        if isinstance(accounts, list):
+            return [getattr(oa, "provider", str(oa)) for oa in accounts]
+        return []
 
     @property
     def oauth_providers(self) -> List[str]:
