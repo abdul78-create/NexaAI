@@ -576,8 +576,18 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // AUTHENTICATED REAL SSE STREAMING
     if (token) {
       activeAbortController = new AbortController()
+      const controller = activeAbortController
       let accumulatedText = ''
+      let isTimedOut = false
       const realBackendConvId = currentConvId.startsWith('conv-') ? undefined : currentConvId
+
+      // Client-side safety timeout: 65s (gracefully aborts if network or upstream provider stalls)
+      const streamTimer = setTimeout(() => {
+        isTimedOut = true
+        if (controller && !controller.signal.aborted) {
+          controller.abort()
+        }
+      }, 65000)
 
       try {
         await streamChatCompletion(
@@ -660,7 +670,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
               if (get().selectedMode === 'high') {
                 get().fetchHighModeQuota()
               }
-              const cleanError = sanitizeErrorMessage(data?.message)
+              let errorMsg = data?.message || 'Streaming failed.'
+              if (data?.code === 'PROVIDER_UNAVAILABLE' || errorMsg.includes('503')) {
+                errorMsg = 'AI provider is temporarily overloaded (503). Click Retry to try again.'
+              } else if (data?.code === 'RATE_LIMIT_EXCEEDED' || errorMsg.includes('429')) {
+                errorMsg = 'AI rate limit reached (429). Please wait a moment and click Retry.'
+              }
+              const cleanError = sanitizeErrorMessage(errorMsg)
               set((state) => ({
                 isStreaming: false,
                 conversations: state.conversations.map((c) => {
@@ -684,11 +700,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
               }))
             }
           },
-          activeAbortController.signal
+          controller.signal
         )
       } catch (err: unknown) {
         const isAbort = err instanceof Error && err.name === 'AbortError'
-        const cleanError = isAbort ? undefined : sanitizeErrorMessage(err instanceof Error ? err.message : 'Stream interrupted.')
+        let cleanError: string | undefined
+        if (isTimedOut) {
+          cleanError = 'Generation timed out. Click Retry to try again.'
+        } else if (isAbort) {
+          cleanError = undefined
+        } else {
+          cleanError = sanitizeErrorMessage(err instanceof Error ? err.message : 'Stream interrupted.')
+        }
+
         set((state) => ({
           isStreaming: false,
           conversations: state.conversations.map((c) => {
@@ -700,7 +724,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                     ? {
                         ...m,
                         content: accumulatedText,
-                        status: isAbort ? 'done' : 'error',
+                        status: isAbort && !isTimedOut ? 'done' : 'error',
                         error: cleanError,
                       }
                     : m
@@ -711,7 +735,33 @@ export const useChatStore = create<ChatState>((set, get) => ({
           }),
         }))
       } finally {
-        activeAbortController = null
+        clearTimeout(streamTimer)
+        if (activeAbortController === controller) {
+          activeAbortController = null
+        }
+        // Safety guarantee: stream is over, isStreaming MUST be false and assistant message finalized
+        set((state) => ({
+          isStreaming: false,
+          conversations: state.conversations.map((c) => {
+            if (c.id === currentConvId) {
+              return {
+                ...c,
+                messages: c.messages.map((m) => {
+                  if (m.id === assistantMsgId && m.status === 'streaming') {
+                    return {
+                      ...m,
+                      status: accumulatedText ? 'done' : 'error',
+                      error: accumulatedText ? undefined : 'No response received from model. Click Retry to try again.',
+                      content: accumulatedText,
+                    }
+                  }
+                  return m
+                }),
+              }
+            }
+            return c
+          }),
+        }))
       }
       return
     }

@@ -4,7 +4,7 @@
  * including SSE streaming via fetch().
  */
 
-import { Conversation, Message } from '@/types/chat'
+import type { Conversation, Message } from '../types/chat'
 import { getApiBaseUrl } from './api-config'
 
 const API_BASE = getApiBaseUrl()
@@ -270,33 +270,93 @@ export async function streamChatCompletion(
   const reader = res.body.getReader()
   const decoder = new TextDecoder('utf-8')
   let buffer = ''
+  let currentEvent = 'token'
+  let dataBuffer: string[] = []
+  let hasFinished = false
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
+  const dispatchEvent = () => {
+    if (dataBuffer.length === 0) return
+    const rawData = dataBuffer.join('\n')
+    dataBuffer = []
+    const eventName = currentEvent || 'token'
+    currentEvent = 'token' // Reset event type for the next SSE message per spec
 
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split(/\r?\n/)
-    buffer = lines.pop() || '' // Keep last incomplete line in buffer
+    if (rawData.trim() === '[DONE]') {
+      hasFinished = true
+      onEvent('message_end', { finish_reason: 'stop' })
+      return
+    }
 
-    let currentEvent = 'token'
-
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (!trimmed) continue
-
-      if (trimmed.startsWith('event:')) {
-        currentEvent = trimmed.slice(6).trim()
-      } else if (trimmed.startsWith('data:')) {
-        const rawData = trimmed.slice(5).trim()
-        try {
-          const parsed = JSON.parse(rawData)
-          onEvent(currentEvent, parsed)
-        } catch {
-          // If plain text token
-          onEvent(currentEvent, { text: rawData })
-        }
+    try {
+      const parsed = JSON.parse(rawData)
+      if (eventName === 'message_end' || eventName === 'error') {
+        hasFinished = true
       }
+      onEvent(eventName, parsed)
+    } catch {
+      // Plain-text token fallback
+      onEvent(eventName, { text: rawData })
+    }
+  }
+
+  const processLine = (line: string) => {
+    // Standard SSE comment or empty line
+    if (line.startsWith(':')) {
+      return
+    }
+    if (line === '') {
+      dispatchEvent()
+      return
+    }
+
+    if (line.startsWith('event:')) {
+      currentEvent = line.slice(6).trim()
+    } else if (line.startsWith('data:')) {
+      // Slice after "data:" and drop single leading space if present
+      let dataPayload = line.slice(5)
+      if (dataPayload.startsWith(' ')) {
+        dataPayload = dataPayload.slice(1)
+      }
+      dataBuffer.push(dataPayload)
+    }
+  }
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split(/\r?\n/)
+      buffer = lines.pop() || '' // Retain trailing partial line in buffer
+
+      for (const line of lines) {
+        processLine(line)
+      }
+    }
+
+    // Process any remaining bytes at stream close
+    buffer += decoder.decode()
+    if (buffer) {
+      const finalLines = buffer.split(/\r?\n/)
+      for (const line of finalLines) {
+        processLine(line)
+      }
+    }
+    // Flush any pending data buffer
+    dispatchEvent()
+
+    // Safety guarantee: If stream closed without an explicit message_end or error event,
+    // dispatch a synthetic message_end so UI state never stays generating indefinitely.
+    if (!hasFinished) {
+      hasFinished = true
+      onEvent('message_end', { finish_reason: 'stop', synthetic: true })
+    }
+  } finally {
+    try {
+      reader.releaseLock()
+    } catch {
+      // Ignore cleanup error if already released
     }
   }
 }

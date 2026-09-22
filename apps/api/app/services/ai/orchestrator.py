@@ -1,5 +1,6 @@
 """Multimodal AI Orchestrator Service for Phase 14."""
 
+import asyncio
 import json
 import time
 import uuid
@@ -291,39 +292,72 @@ class MultimodalAIOrchestrator:
         input_tokens = 0
         output_tokens = 0
         stream_successful = False
+        message_end_sent = False
+        error_occurred = False
+        timeout_seconds = getattr(settings, "AI_STREAM_TIMEOUT_SECONDS", 60.0)
 
         try:
-            async for event in provider.stream(messages=msg_history, model=effective_model):
+            iterator = provider.stream(messages=msg_history, model=effective_model).__aiter__()
+            while True:
+                elapsed = time.time() - start_time
+                remaining = max(0.5, timeout_seconds - elapsed)
+                try:
+                    event = await asyncio.wait_for(iterator.__anext__(), timeout=remaining)
+                except StopAsyncIteration:
+                    break
+                except asyncio.TimeoutError:
+                    error_occurred = True
+                    yield format_sse(
+                        "error",
+                        {"code": "STREAMING_TIMEOUT", "message": f"Stream generation timed out after {int(timeout_seconds)}s."},
+                    )
+                    break
+
                 if event.event == "token":
                     token_text = event.data.get("text", "")
-                    accumulated_text += token_text
-                    yield format_sse("token", {"text": token_text})
+                    if token_text:
+                        accumulated_text += token_text
+                        yield format_sse("token", {"text": token_text})
 
                 elif event.event == "usage":
-                    input_tokens = event.data.get("input_tokens", 0)
-                    output_tokens = event.data.get("output_tokens", 0)
+                    input_tokens = event.data.get("input_tokens", input_tokens)
+                    output_tokens = event.data.get("output_tokens", output_tokens)
                     yield format_sse("usage", event.data)
 
                 elif event.event == "error":
+                    error_occurred = True
                     yield format_sse("error", event.data)
-                    return
+                    break
 
                 elif event.event == "message_end":
                     stream_successful = True
+                    message_end_sent = True
+                    finish_reason = event.data.get("finish_reason", "stop") if isinstance(event.data, dict) else "stop"
                     yield format_sse(
                         "message_end",
-                        {"message_id": str(assistant_msg_id), "finish_reason": "stop"}
+                        {"message_id": str(assistant_msg_id), "finish_reason": finish_reason},
                     )
+                    break
+
+            # Guarantee final completion event if stream finished normally without error and message_end wasn't sent
+            if not error_occurred and not message_end_sent:
+                stream_successful = True
+                message_end_sent = True
+                yield format_sse(
+                    "message_end",
+                    {"message_id": str(assistant_msg_id), "finish_reason": "stop"},
+                )
 
         except Exception as e:
+            error_occurred = True
             yield format_sse(
                 "error",
-                {"code": "STREAMING_ERROR", "message": f"Stream execution failed: {str(e)}"}
+                {"code": "STREAMING_ERROR", "message": f"Stream execution failed: {str(e)}"},
             )
-            return
 
         # 7. Persist Assistant ChatMessage & Telemetry
-        if stream_successful and accumulated_text:
+        # Preserve partial content whenever accumulated_text is non-empty
+        if accumulated_text:
             conv_id = conv.id
             assistant_msg = ChatMessage(
                 id=assistant_msg_id,
@@ -332,7 +366,7 @@ class MultimodalAIOrchestrator:
                 role="assistant",
                 content=accumulated_text,
                 model=effective_model,
-                input_tokens=input_tokens,
+                input_tokens=input_tokens or max(1, len(final_prompt_text) // 4),
                 output_tokens=output_tokens or max(1, len(accumulated_text) // 4),
             )
             self.db.add(assistant_msg)
@@ -348,10 +382,10 @@ class MultimodalAIOrchestrator:
                     feature_type="chat",
                     provider=getattr(provider, "provider_name", getattr(settings, "AI_PROVIDER", "gemini")),
                     model_name=effective_model,
-                    prompt_tokens=input_tokens,
-                    completion_tokens=output_tokens,
+                    prompt_tokens=input_tokens or max(1, len(final_prompt_text) // 4),
+                    completion_tokens=output_tokens or max(1, len(accumulated_text) // 4),
                     execution_duration_ms=duration_ms,
-                    status="success",
+                    status="success" if stream_successful else "error",
                     mode=canonical_mode.value,
                     conversation_id=conv_id,
                     message_id=assistant_msg_id,

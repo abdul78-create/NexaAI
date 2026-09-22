@@ -138,6 +138,7 @@ class Settings(BaseSettings):
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
     AI_REQUEST_TIMEOUT: float = 30.0
+    AI_STREAM_TIMEOUT_SECONDS: float = 60.0
     ENABLE_MOCK_AI_FALLBACK: bool = True
 
     # Logging

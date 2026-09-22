@@ -1,7 +1,14 @@
 """OpenAI-compatible AI Provider integration supporting standard OpenAI, Ollama, vLLM, Groq, & DeepSeek."""
 
 from typing import AsyncIterator, Dict, List, Optional, Any
-from openai import AsyncOpenAI, APIError, APIConnectionError, RateLimitError, AuthenticationError
+from openai import (
+    AsyncOpenAI,
+    APIError,
+    APIConnectionError,
+    RateLimitError,
+    AuthenticationError,
+    InternalServerError,
+)
 
 from app.services.ai.base import (
     BaseAIProvider,
@@ -141,28 +148,44 @@ class OpenAIProvider(BaseAIProvider):
 
         total_input_tokens = 0
         total_output_tokens = 0
+        accumulated_chars = 0
+        finish_reason = "stop"
+        has_emitted_tokens = False
 
         try:
             stream = await self.client.chat.completions.create(**kwargs)
             async for chunk in stream:
                 # Handle usage metadata chunk if provided by provider
                 if hasattr(chunk, "usage") and chunk.usage:
-                    total_input_tokens = chunk.usage.prompt_tokens or 0
-                    total_output_tokens = chunk.usage.completion_tokens or 0
+                    total_input_tokens = getattr(chunk.usage, "prompt_tokens", None) or total_input_tokens
+                    total_output_tokens = getattr(chunk.usage, "completion_tokens", None) or total_output_tokens
 
-                if chunk.choices and len(chunk.choices) > 0:
-                    delta = chunk.choices[0].delta
-                    if delta and delta.content:
-                        yield StreamEvent(
-                            event="token",
-                            data={"text": delta.content},
-                        )
+                if getattr(chunk, "choices", None) and len(chunk.choices) > 0:
+                    choice = chunk.choices[0]
+                    chunk_finish = getattr(choice, "finish_reason", None)
+                    if chunk_finish:
+                        finish_reason = chunk_finish
+
+                    delta = getattr(choice, "delta", None)
+                    if delta:
+                        content = getattr(delta, "content", None)
+                        # Fallback to reasoning_content if content is None (Gemini thinking / reasoning models)
+                        if content is None:
+                            content = getattr(delta, "reasoning_content", None)
+
+                        if content:
+                            has_emitted_tokens = True
+                            accumulated_chars += len(content)
+                            yield StreamEvent(
+                                event="token",
+                                data={"text": content},
+                            )
 
             # Standard fallback estimation if provider doesn't report stream usage
             if total_input_tokens == 0:
                 total_input_tokens = sum(max(1, len(m.content) // 4) for m in messages)
             if total_output_tokens == 0:
-                total_output_tokens = 50 # Default estimation if unpopulated
+                total_output_tokens = max(1, accumulated_chars // 4) if has_emitted_tokens else 1
 
             yield StreamEvent(
                 event="usage",
@@ -171,7 +194,7 @@ class OpenAIProvider(BaseAIProvider):
 
             yield StreamEvent(
                 event="message_end",
-                data={"finish_reason": "stop"},
+                data={"finish_reason": finish_reason or "stop"},
             )
 
         except AuthenticationError as e:
@@ -182,7 +205,12 @@ class OpenAIProvider(BaseAIProvider):
         except RateLimitError as e:
             yield StreamEvent(
                 event="error",
-                data={"code": "RATE_LIMIT_EXCEEDED", "message": "AI provider rate limit exceeded. Please retry later."},
+                data={"code": "RATE_LIMIT_EXCEEDED", "message": "AI provider rate limit exceeded (429). Please retry shortly."},
+            )
+        except InternalServerError as e:
+            yield StreamEvent(
+                event="error",
+                data={"code": "PROVIDER_UNAVAILABLE", "message": "AI provider is temporarily overloaded (503 Service Unavailable). Please retry shortly."},
             )
         except APIConnectionError as e:
             yield StreamEvent(
@@ -190,9 +218,10 @@ class OpenAIProvider(BaseAIProvider):
                 data={"code": "CONNECTION_ERROR", "message": "Failed to connect to AI provider service."},
             )
         except APIError as e:
+            err_msg = getattr(e, "message", str(e))
             yield StreamEvent(
                 event="error",
-                data={"code": "PROVIDER_API_ERROR", "message": str(e.message) if hasattr(e, 'message') else str(e)},
+                data={"code": "PROVIDER_API_ERROR", "message": str(err_msg)},
             )
         except Exception as e:
             yield StreamEvent(
