@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles, Loader2, AlertCircle, RotateCcw } from 'lucide-react'
 import { Message } from '@/types/chat'
 import { MessageRenderer } from '@/components/chat/MessageRenderer'
 import { MessageActions } from '@/components/chat/MessageActions'
@@ -214,7 +214,7 @@ export function MessageBubble({
         </div>
 
         {/* Body */}
-        <div className="text-foreground">
+        <div className="text-foreground space-y-3">
           <AnimatePresence mode="wait">
             {!message.content && isCurrentlyStreaming ? (
               <ThinkingDots key="thinking" />
@@ -231,10 +231,39 @@ export function MessageBubble({
                   <span className="inline-block w-0.5 h-4 ml-0.5 bg-brand rounded-full animate-blink align-middle" />
                 )}
               </motion.div>
-            ) : (
+            ) : message.status === 'error' || message.error ? null : (
               <span className="text-sm text-muted-foreground/40 italic">Empty response</span>
             )}
           </AnimatePresence>
+
+          {/* Clean User-Facing Error State */}
+          {(message.status === 'error' || Boolean(message.error)) && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-start justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive max-w-xl"
+            >
+              <div className="flex items-start gap-2.5 min-w-0">
+                <AlertCircle className="size-4 shrink-0 mt-0.5 text-destructive" />
+                <div className="space-y-0.5">
+                  <p className="font-medium text-foreground">{message.error || 'Unable to complete response'}</p>
+                  <p className="text-[11px] text-muted-foreground">The AI provider encountered an issue. You can try regenerating.</p>
+                </div>
+              </div>
+              {onRegenerate && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onRegenerate(message.id)}
+                  className="h-7 px-2.5 text-xs border-destructive/30 text-destructive hover:bg-destructive/15 shrink-0"
+                >
+                  <RotateCcw className="mr-1.5 size-3" />
+                  Retry
+                </Button>
+              )}
+            </motion.div>
+          )}
         </div>
 
         {/* Action Toolbar */}

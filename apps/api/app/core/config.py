@@ -87,9 +87,9 @@ class Settings(BaseSettings):
 
 
     # Chat Modes (Task 4)
-    CHAT_MODE_LOW_MODEL: str = "gemini-2.5-flash"
-    CHAT_MODE_STANDARD_MODEL: str = "gemini-2.5-flash"
-    CHAT_MODE_HIGH_MODEL: str = "gemini-2.5-pro"
+    CHAT_MODE_LOW_MODEL: str = "gemini-3.6-flash"
+    CHAT_MODE_STANDARD_MODEL: str = "gemini-3.6-flash"
+    CHAT_MODE_HIGH_MODEL: str = "gemini-3.6-flash"
     CHAT_MODE_HIGH_DAILY_LIMIT: int = 5
 
     # CORS (accepts JSON array string, comma-separated URLs, or plain URL string)
@@ -133,7 +133,7 @@ class Settings(BaseSettings):
     AI_PROVIDER: str = "gemini"
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-3.6-flash"
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
@@ -200,7 +200,7 @@ class Settings(BaseSettings):
     OCR_PROVIDER: str = "mock"  # "tesseract" | "mock"
     VISION_PROVIDER: str = "gemini"  # "gemini" | "openai" | "mock"
     OCR_DEFAULT_LANGUAGE: str = "eng"
-    VISION_MODEL: str = "gemini-2.5-flash"
+    VISION_MODEL: str = "gemini-3.6-flash"
     VISION_TIMEOUT_SECONDS: float = 30.0
     VISION_MAX_IMAGE_BYTES: int = 10_485_760  # 10 MB
     VISION_MAX_PROMPT_LENGTH: int = 2000

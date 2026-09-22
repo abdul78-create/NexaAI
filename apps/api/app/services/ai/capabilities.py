@@ -61,6 +61,17 @@ MODEL_CAPABILITIES_REGISTRY: Dict[str, ModelCapabilities] = {
         streaming=True,
         max_context_tokens=128000,
     ),
+    "gemini-3.6-flash": ModelCapabilities(
+        model_id="gemini-3.6-flash",
+        name="Gemini 3.6 Flash",
+        text=True,
+        vision=True,
+        audio=False,
+        documents=True,
+        streaming=True,
+        max_context_tokens=1048576,
+        max_output_tokens=8192,
+    ),
     "gemini-2.5-flash": ModelCapabilities(
         model_id="gemini-2.5-flash",
         name="Gemini 2.5 Flash",

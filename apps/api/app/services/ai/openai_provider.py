@@ -24,12 +24,13 @@ class OpenAIProvider(BaseAIProvider):
     }
 
     GEMINI_MODEL_MAP = {
-        "nexa-standard": "gemini-2.5-flash",
-        "nexa-fast": "gemini-2.5-flash",
-        "nexa-coder": "gemini-2.5-flash",
-        "nexa-reasoning": "gemini-2.5-pro",
-        "nexa-pro": "gemini-2.5-pro",
-        "nexa-ultra": "gemini-2.5-pro",
+        "nexa-standard": "gemini-3.6-flash",
+        "nexa-fast": "gemini-3.6-flash",
+        "nexa-coder": "gemini-3.6-flash",
+        "nexa-reasoning": "gemini-3.6-flash",
+        "nexa-pro": "gemini-3.6-flash",
+        "nexa-ultra": "gemini-3.6-flash",
+        "nexa-high": "gemini-3.6-flash",
     }
 
     def __init__(
@@ -57,7 +58,7 @@ class OpenAIProvider(BaseAIProvider):
         if default_model:
             self.default_model = default_model
         elif self.provider_name == "gemini":
-            self.default_model = "gemini-2.5-flash"
+            self.default_model = "gemini-3.6-flash"
         else:
             self.default_model = "gpt-4o-mini"
 
@@ -73,8 +74,11 @@ class OpenAIProvider(BaseAIProvider):
         model_map = self.GEMINI_MODEL_MAP if self.provider_name == "gemini" else self.OPENAI_MODEL_MAP
         if model in model_map:
             return model_map[model]
-        if self.provider_name == "gemini" and model.startswith("gemini-"):
-            return model
+        if self.provider_name == "gemini":
+            if model in ("gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"):
+                return "gemini-3.6-flash"
+            if model.startswith("gemini-"):
+                return model
         if self.provider_name == "openai" and (
             model.startswith("gpt-") or model.startswith("o1") or model.startswith("o3")
         ):

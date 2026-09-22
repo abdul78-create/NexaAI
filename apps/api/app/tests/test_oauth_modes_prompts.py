@@ -22,9 +22,9 @@ async def test_mode_router_resolution():
     assert normalize_chat_mode(None) == ChatMode.STANDARD
     assert normalize_chat_mode("invalid") == ChatMode.STANDARD
 
-    assert resolve_model_for_mode(ChatMode.LOW) == "gemini-2.5-flash"
-    assert resolve_model_for_mode(ChatMode.STANDARD) == "gemini-2.5-flash"
-    assert resolve_model_for_mode(ChatMode.HIGH) == "gemini-2.5-pro"
+    assert resolve_model_for_mode(ChatMode.LOW) == "gemini-3.6-flash"
+    assert resolve_model_for_mode(ChatMode.STANDARD) == "gemini-3.6-flash"
+    assert resolve_model_for_mode(ChatMode.HIGH) == "gemini-3.6-flash"
 
 
 @pytest.mark.asyncio

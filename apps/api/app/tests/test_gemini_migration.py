@@ -32,13 +32,13 @@ async def test_gemini_provider_factory_resolution(monkeypatch):
     monkeypatch.setattr(settings, "AI_PROVIDER", "gemini")
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-gemini-key-12345")
     monkeypatch.setattr(settings, "GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
-    monkeypatch.setattr(settings, "GEMINI_MODEL", "gemini-2.5-flash")
+    monkeypatch.setattr(settings, "GEMINI_MODEL", "gemini-3.6-flash")
 
     provider = get_ai_provider()
     assert isinstance(provider, OpenAIProvider)
     assert provider.provider_name == "gemini"
     assert "generativelanguage.googleapis.com" in provider.base_url
-    assert provider.default_model == "gemini-2.5-flash"
+    assert provider.default_model == "gemini-3.6-flash"
 
     # 2. When explicitly requesting "mock"
     mock_prov = get_ai_provider("mock")
@@ -68,15 +68,16 @@ async def test_gemini_model_mapping():
         provider_name="gemini",
     )
     assert gemini_prov.base_url == "https://generativelanguage.googleapis.com/v1beta/openai/"
-    assert gemini_prov._resolve_model("nexa-standard") == "gemini-2.5-flash"
-    assert gemini_prov._resolve_model("nexa-fast") == "gemini-2.5-flash"
-    assert gemini_prov._resolve_model("nexa-coder") == "gemini-2.5-flash"
-    assert gemini_prov._resolve_model("nexa-reasoning") == "gemini-2.5-pro"
-    assert gemini_prov._resolve_model("nexa-pro") == "gemini-2.5-pro"
-    assert gemini_prov._resolve_model("nexa-ultra") == "gemini-2.5-pro"
-    assert gemini_prov._resolve_model("gemini-2.5-flash") == "gemini-2.5-flash"
-    assert gemini_prov._resolve_model("gemini-2.5-pro") == "gemini-2.5-pro"
-    assert gemini_prov._resolve_model("unrecognized-alias") == "gemini-2.5-flash"
+    assert gemini_prov._resolve_model("nexa-standard") == "gemini-3.6-flash"
+    assert gemini_prov._resolve_model("nexa-fast") == "gemini-3.6-flash"
+    assert gemini_prov._resolve_model("nexa-coder") == "gemini-3.6-flash"
+    assert gemini_prov._resolve_model("nexa-reasoning") == "gemini-3.6-flash"
+    assert gemini_prov._resolve_model("nexa-pro") == "gemini-3.6-flash"
+    assert gemini_prov._resolve_model("nexa-ultra") == "gemini-3.6-flash"
+    assert gemini_prov._resolve_model("gemini-2.5-flash") == "gemini-3.6-flash"
+    assert gemini_prov._resolve_model("gemini-2.5-pro") == "gemini-3.6-flash"
+    assert gemini_prov._resolve_model("gemini-3.6-flash") == "gemini-3.6-flash"
+    assert gemini_prov._resolve_model("unrecognized-alias") == "gemini-3.6-flash"
 
     openai_prov = OpenAIProvider(
         api_key="fake-openai-key",
@@ -138,20 +139,20 @@ async def test_gemini_stream_does_not_send_stream_options():
     gemini_prov.client.chat.completions.create = fake_create
 
     messages = [ChatMessagePayload(role="user", content="Hello Gemini")]
-    async for _ in gemini_prov.stream(messages=messages, model="gemini-2.5-flash"):
+    async for _ in gemini_prov.stream(messages=messages, model="gemini-3.6-flash"):
         pass
 
     assert "stream_options" not in captured_kwargs
     assert captured_kwargs.get("stream") is True
-    assert captured_kwargs.get("model") == "gemini-2.5-flash"
+    assert captured_kwargs.get("model") == "gemini-3.6-flash"
 
     async for _ in gemini_prov.stream(messages=messages, model="nexa-reasoning"):
         pass
-    assert captured_kwargs.get("model") == "gemini-2.5-pro"
+    assert captured_kwargs.get("model") == "gemini-3.6-flash"
 
     async for _ in gemini_prov.stream(messages=messages, model="nexa-fast"):
         pass
-    assert captured_kwargs.get("model") == "gemini-2.5-flash"
+    assert captured_kwargs.get("model") == "gemini-3.6-flash"
 
     # Now verify that OpenAI requests DO include stream_options
     openai_prov = OpenAIProvider(
@@ -183,12 +184,12 @@ async def test_vision_provider_gemini_configuration(monkeypatch):
     monkeypatch.setattr(settings, "VISION_PROVIDER", "gemini")
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-gemini-vision-key")
     monkeypatch.setattr(settings, "GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/")
-    monkeypatch.setattr(settings, "VISION_MODEL", "gemini-2.5-flash")
+    monkeypatch.setattr(settings, "VISION_MODEL", "gemini-3.6-flash")
 
     prov = get_vision_provider()
     assert isinstance(prov, OpenAIVisionProvider)
     assert prov.provider_name == "gemini"
-    assert prov.default_model == "gemini-2.5-flash"
+    assert prov.default_model == "gemini-3.6-flash"
     assert "generativelanguage.googleapis.com" in prov.base_url
 
     # Fallback to mock when key is empty

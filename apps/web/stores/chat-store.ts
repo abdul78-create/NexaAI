@@ -92,6 +92,23 @@ interface ChatState {
 
 let activeAbortController: AbortController | null = null
 
+function sanitizeErrorMessage(rawMessage?: string): string {
+  if (!rawMessage) return 'Unable to generate AI response. Please try again.'
+  const lower = rawMessage.toLowerCase()
+  if (lower.includes('quota') || lower.includes('rate limit') || lower.includes('429')) {
+    return 'Rate limit or quota exceeded. Please wait a moment and try again.'
+  }
+  if (lower.includes('not found') || lower.includes('404') || lower.includes('provider_api_error')) {
+    return 'The AI model service encountered an issue. Please try again.'
+  }
+  if (lower.includes('timeout') || lower.includes('connection')) {
+    return 'Network connection timed out. Please check your connection and try again.'
+  }
+  // Strip URLs or credentials if present
+  const sanitized = rawMessage.replace(/https?:\/\/\S+/gi, '').replace(/[a-zA-Z0-9_-]{24,}/g, '[redacted]').trim()
+  return sanitized || 'An error occurred during generation. Please try again.'
+}
+
 export const useChatStore = create<ChatState>((set, get) => ({
   conversations: INITIAL_CONVERSATIONS,
   trashedConversations: [],
@@ -166,12 +183,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
           conversations: backendConvs,
           isLoadingConversations: false,
         })
-        const activeId = get().activeConversationId || backendConvs[0].id
-        const detail = await fetchConversationDetail(token, activeId)
-        set((state) => ({
-          conversations: state.conversations.map((c) => (c.id === detail.id ? detail : c)),
-          activeConversationId: activeId,
-        }))
+        const currentActive = get().activeConversationId
+        const activeId = currentActive && backendConvs.some((c) => c.id === currentActive)
+          ? currentActive
+          : backendConvs[0].id
+        try {
+          const detail = await fetchConversationDetail(token, activeId)
+          set((state) => ({
+            conversations: state.conversations.map((c) => (c.id === detail.id ? detail : c)),
+            activeConversationId: activeId,
+          }))
+        } catch {
+          set({ activeConversationId: activeId })
+        }
       } else {
         set({ conversations: [], activeConversationId: null, isLoadingConversations: false })
       }
@@ -488,13 +512,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
       status: 'done',
     }
 
-    let currentConvId = activeConversationId
+    const activeConvId = activeConversationId
+    const isConvExisting = Boolean(activeConvId && conversations.some((c) => c.id === activeConvId))
+    let currentConvId: string = isConvExisting && activeConvId ? activeConvId : `conv-${Date.now()}`
     let updatedConversations = [...conversations]
 
-    // If starting from empty state, initialize new conversation
-    if (!currentConvId) {
+    // If starting from empty state or active conversation is not in current conversation list, initialize new conversation
+    if (!isConvExisting) {
       const newTitle = trimmed.length > 35 ? trimmed.slice(0, 35) + '...' : trimmed
-      currentConvId = `conv-${Date.now()}`
       const newConversation: Conversation = {
         id: currentConvId,
         title: newTitle,
@@ -635,6 +660,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               if (get().selectedMode === 'high') {
                 get().fetchHighModeQuota()
               }
+              const cleanError = sanitizeErrorMessage(data?.message)
               set((state) => ({
                 isStreaming: false,
                 conversations: state.conversations.map((c) => {
@@ -645,9 +671,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
                         m.id === assistantMsgId
                           ? {
                               ...m,
-                              content: accumulatedText || 'Error generating response.',
+                              content: accumulatedText,
                               status: 'error',
-                              error: data.message || 'Stream connection error.',
+                              error: cleanError,
                             }
                           : m
                       ),
@@ -662,6 +688,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         )
       } catch (err: unknown) {
         const isAbort = err instanceof Error && err.name === 'AbortError'
+        const cleanError = isAbort ? undefined : sanitizeErrorMessage(err instanceof Error ? err.message : 'Stream interrupted.')
         set((state) => ({
           isStreaming: false,
           conversations: state.conversations.map((c) => {
@@ -674,7 +701,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                         ...m,
                         content: accumulatedText,
                         status: isAbort ? 'done' : 'error',
-                        error: isAbort ? undefined : (err instanceof Error ? err.message : 'Stream interrupted.'),
+                        error: cleanError,
                       }
                     : m
                 ),

@@ -73,7 +73,7 @@ class OpenAIVisionProvider(BaseVisionProvider):
         if self.provider_name == "gemini":
             self.api_key = api_key or settings.GEMINI_API_KEY or settings.OPENAI_API_KEY
             self.base_url = (base_url or settings.GEMINI_BASE_URL).rstrip("/")
-            self.default_model = default_model or settings.VISION_MODEL or "gemini-2.5-flash"
+            self.default_model = default_model or settings.VISION_MODEL or "gemini-3.6-flash"
         else:
             self.api_key = api_key or settings.OPENAI_API_KEY
             self.base_url = (base_url or settings.OPENAI_BASE_URL).rstrip("/")
@@ -84,15 +84,18 @@ class OpenAIVisionProvider(BaseVisionProvider):
             return self.default_model
         if self.provider_name == "gemini":
             mapping = {
-                "nexa-standard": "gemini-2.5-flash",
-                "nexa-fast": "gemini-2.5-flash",
-                "nexa-coder": "gemini-2.5-flash",
-                "nexa-reasoning": "gemini-2.5-pro",
-                "nexa-pro": "gemini-2.5-pro",
-                "nexa-ultra": "gemini-2.5-pro",
+                "nexa-standard": "gemini-3.6-flash",
+                "nexa-fast": "gemini-3.6-flash",
+                "nexa-coder": "gemini-3.6-flash",
+                "nexa-reasoning": "gemini-3.6-flash",
+                "nexa-pro": "gemini-3.6-flash",
+                "nexa-ultra": "gemini-3.6-flash",
+                "nexa-high": "gemini-3.6-flash",
             }
             if model in mapping:
                 return mapping[model]
+            if model in ("gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash", "gemini-1.5-pro"):
+                return "gemini-3.6-flash"
             if model.startswith("gemini-"):
                 return model
             return self.default_model

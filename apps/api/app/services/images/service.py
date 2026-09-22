@@ -48,7 +48,7 @@ def get_vision_provider() -> BaseVisionProvider:
         return OpenAIVisionProvider(
             api_key=settings.GEMINI_API_KEY,
             base_url=settings.GEMINI_BASE_URL,
-            default_model=settings.VISION_MODEL or "gemini-2.5-flash",
+            default_model=settings.VISION_MODEL or "gemini-3.6-flash",
             provider_name="gemini",
         )
     if settings.VISION_PROVIDER.lower() in ("openai", "gemini") and settings.OPENAI_API_KEY:
